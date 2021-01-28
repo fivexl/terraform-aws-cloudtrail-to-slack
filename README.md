@@ -2,6 +2,10 @@
 
 # Terraform module to deploy lambda that sends notifications about AWS CloudTrail events to Slack
 
+Example message
+
+[![Example message](example_message.png)
+
 Module deployment with default rule set
 
 ```hlc
