@@ -63,7 +63,7 @@ Default rules
 # Notify only for non read (Starts from Get/Describe/Head/List etc) and
 # non data events (like PutObject, GetObject, DeleteObject, Inovoke)
 # as well as kms Decrypt
-"eventName" in event and not event["eventName"].startswith(("Get", "Describe", "List", "Head", "DeleteObject", "PutObject", "Invoke", "Decrypt"
+"eventName" in event and not event["eventName"].startswith(("Get", "Describe", "List", "Head", "DeleteObject", "PutObject", "Invoke", "Decrypt"))
 ```
 
 ## Requirements
