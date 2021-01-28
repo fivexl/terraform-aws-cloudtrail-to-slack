@@ -5,10 +5,15 @@
 Module deployment with default rule set
 
 ```hlc
+# we recomend storing hook url in SSM Parameter store and not commit it to the repo
+data "aws_ssm_parameter" "hook" {
+  name = "/cloudtrail-to-slack/hook"
+}
+
 module "cloudtrail_to_slack" {
   source                               = "fivexl/cloudtrail-to-slack/aws"
   version                              = "1.0.0"
-  slack_hook_url                       = "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+  slack_hook_url                       = data.aws_ssm_parameter.hook.value
   cloudtrail_cloudwatch_log_group_name = "cloudtrail"
 }
 ```
@@ -16,10 +21,15 @@ module "cloudtrail_to_slack" {
 Module deployment with user defined and default rule sets
 
 ```hlc
+# we recomend storing hook url in SSM Parameter store and not commit it to the repo
+data "aws_ssm_parameter" "hook" {
+  name = "/cloudtrail-to-slack/hook"
+}
+
 module "cloudtrail_to_slack" {
   source                               = "fivexl/cloudtrail-to-slack/aws"
   version                              = "1.0.0"
-  slack_hook_url                       = "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+  slack_hook_url                       = data.aws_ssm_parameter.hook.value
   cloudtrail_cloudwatch_log_group_name = "cloudtrail"
   rules                                = ["\"errorCode\" in event and event[\"errorCode\"] == \"UnauthorizedOperation\""]
 }
@@ -28,10 +38,15 @@ module "cloudtrail_to_slack" {
 Module deployment with only user provided rules
 
 ```hlc
+# we recomend storing hook url in SSM Parameter store and not commit it to the repo
+data "aws_ssm_parameter" "hook" {
+  name = "/cloudtrail-to-slack/hook"
+}
+
 module "cloudtrail_to_slack" {
   source                               = "fivexl/cloudtrail-to-slack/aws"
   version                              = "1.0.0"
-  slack_hook_url                       = "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+  slack_hook_url                       = data.aws_ssm_parameter.hook.value
   cloudtrail_cloudwatch_log_group_name = "cloudtrail"
   rules                                = ["\"errorCode\" in event and event[\"errorCode\"] == \"UnauthorizedOperation\""]
   use_default_rules                    = false
