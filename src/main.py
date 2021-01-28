@@ -18,6 +18,7 @@
 import base64
 import json
 import gzip
+import sys
 import os
 import http.client
 from datetime import datetime
@@ -61,7 +62,7 @@ def lambda_handler(event, context):
         rules += rules_list
     if events_to_track:
         events_list = events_to_track.replace(" ", "").split(",")
-        rules.append(f'"eventName" in event and not in {events_list}')
+        rules.append(f'"eventName" in event and event["eventName"] not in {json.dumps(events_list)}')
     if not rules:
         raise Exception("Have no rules to apply!!! Check configuration - add some rules or enable default rules")
     print(f'Going to use the following rules:\n{rules}')
@@ -86,9 +87,9 @@ def should_message_be_processed(event, rules):
             if eval(rule, {}, {'event': flat_event}) is True:
                 print(f'Event "{event_name}"" matched rule:\n{rule}')
                 return True
-        except KeyError as error:
-            print(f'Event parsing failed with KeyError. Rule: {rule}\nEvent:\n {event}\nFlat event:\n {flat_event}')
-            raise error
+        except:
+            print(f'Event parsing failed: {sys.exc_info()[0]}. Rule: {rule}\nEvent:\n {event}\nFlat event:\n {flat_event}')
+            raise
     print(f'did not match any rules: event {event_name} called by {user}')
     return False
 

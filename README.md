@@ -18,7 +18,7 @@ module "cloudtrail_to_slack" {
 }
 ```
 
-Module deployment with user defined rules and default rule sets
+Module deployment with the list of events to track and default rule sets
 
 ```hlc
 # we recomend storing hook url in SSM Parameter store and not commit it to the repo
@@ -31,7 +31,7 @@ module "cloudtrail_to_slack" {
   version                              = "1.0.0"
   slack_hook_url                       = data.aws_ssm_parameter.hook.value
   cloudtrail_cloudwatch_log_group_name = "cloudtrail"
-  rules                                = "'errorCode' in event and event['errorCode'] == 'UnauthorizedOperation','userIdentity.type' in event and event['userIdentity.type'] == 'Root'"
+  events_to_track                      = "CreateUser,StartInstances"
 }
 ```
 
