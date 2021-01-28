@@ -3,7 +3,7 @@ module "lambda" {
 
   function_name = var.function_name
   description   = "Send CloudTrail Events to Slack"
-  handler       = "index.lambda_handler"
+  handler       = "main.lambda_handler"
   runtime       = "python3.8"
   publish       = true
 
