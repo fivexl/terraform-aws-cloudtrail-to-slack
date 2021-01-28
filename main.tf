@@ -7,7 +7,7 @@ module "lambda" {
   runtime       = "python3.8"
   publish       = true
 
-  source_path = "./src/"
+  source_path = "${path.module}/src/"
 
   environment_variables = {
     HOOK_URL = var.slack_hook_url
