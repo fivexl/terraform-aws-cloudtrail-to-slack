@@ -21,6 +21,12 @@ variable "rules" {
     type        = string
 }
 
+variable "events_to_include" {
+    description = "Comma-separated list events to inclide into the filter"
+    default     = ""
+    type        = string
+}
+
 variable "use_default_rules" {
     description = "List of rules to filter events"
     default     = true

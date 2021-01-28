@@ -52,11 +52,15 @@ def lambda_handler(event, context):
     hook_url = read_env_variable_or_die('HOOK_URL')
     user_rules = os.environ.get('RULES', None)
     use_default_rules = os.environ.get('USE_DEFAULT_RULES', None)
+    events_to_include = os.environ.get('EVENTS_TO_INCLUDE', None)
     rules = default_rules
     if user_rules and not use_default_rules:
         rules = json.loads(user_rules)
     elif user_rules and not use_default_rules:
         rules += json.loads(user_rules)
+    if events_to_include:
+        events_list = events_to_include.replace(" ", "").split(",")
+        rules.append(f'"eventName" in event and not in {events_list}')
     print(f'Going to use the following rules:\n{rules}')
     compressed_payload = base64.b64decode(event['awslogs']['data'])
     uncompressed_payload = gzip.decompress(compressed_payload)
