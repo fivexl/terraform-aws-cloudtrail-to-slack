@@ -62,7 +62,7 @@ def lambda_handler(event, context):
         rules += rules_list
     if events_to_track:
         events_list = events_to_track.replace(" ", "").split(",")
-        rules.append(f'"eventName" in event and event["eventName"] not in {json.dumps(events_list)}')
+        rules.append(f'"eventName" in event and event["eventName"] in {json.dumps(events_list)}')
     if not rules:
         raise Exception("Have no rules to apply!!! Check configuration - add some rules or enable default rules")
     print(f'Going to use the following rules:\n{rules}')
