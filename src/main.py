@@ -165,7 +165,7 @@ def event_to_slack_message(event):
                 'type': 'section',
                 'text': {
                     'type': 'mrkdwn',
-                    'text': ':unacceptable: *Login without MFA!* :unacceptable:'
+                    'text': ':warning: *Login without MFA!* :warning:'
                 }
             }
         )
