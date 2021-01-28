@@ -24,7 +24,7 @@ default_rules.append('"eventName" in event and event["eventName"] == "ConsoleLog
 # Notify if someone is trying to do something they not supposed to be doing
 default_rules.append('"errorCode" in event and event["errorCode"] == "UnauthorizedOperation"')
 # Notify about all actions done by root
-default_rules.append('"userIdentity.type" in event and event["userIdentity.type" == "Root"]')
+default_rules.append('"userIdentity.type" in event and event["userIdentity.type"] == "Root"')
 # Notify only for non read (Starts from Get/Describe/Head/List etc) and
 # non data events (like PutObject, GetObject, DeleteObject, Inovoke)
 # as well as kms Decrypt
