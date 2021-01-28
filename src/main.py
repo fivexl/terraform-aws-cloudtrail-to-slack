@@ -85,7 +85,7 @@ def should_message_be_processed(event, rules):
     for rule in rules:
         try:
             if eval(rule, {}, {'event': flat_event}) is True:
-                print(f'Event "{event_name}"" matched rule:\n{rule}')
+                print(f'Event "{flat_event}"" matched rule:\n{rule}')
                 return True
         except:
             print(f'Event parsing failed: {sys.exc_info()[0]}. Rule: {rule}\nEvent:\n {event}\nFlat event:\n {flat_event}')
