@@ -20,7 +20,7 @@
 default_rules = list()
 
 # Notify if someone logged in without MFA but skip notification for SSO logins
-default_rules.append('"event["eventName"] == "ConsoleLogin" and event["additionalEventData.MFAUsed"] != "Yes" and "assumed-role/AWSReservedSSO" not in event["userIdentity.arn"]')
+default_rules.append('event["eventName"] == "ConsoleLogin" and event["additionalEventData.MFAUsed"] != "Yes" and "assumed-role/AWSReservedSSO" not in event["userIdentity.arn"]')
 # Notify if someone is trying to do something they not supposed to be doing
 default_rules.append('"errorCode" in event and event["errorCode"] == "UnauthorizedOperation"')
 # Notify about all non-read actions done by root
