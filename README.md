@@ -69,16 +69,12 @@ You should use notation `userIdentity.arn`
 Default rules
 
 ```python
-# Notify if someone logged in without MFA
-"eventName" in event and event["eventName"] == "ConsoleLogin" and event["additionalEventData.MFAUsed"] != "Yes"
+# Notify if someone logged in without MFA but skip notification for SSO logins
+"eventName" in event and event["eventName"] == "ConsoleLogin" and event["additionalEventData.MFAUsed"] != "Yes" and "assumed-role/AWSReservedSSO" not in event["userIdentity.arn"]
 # Notify if someone is trying to do something they not supposed to be doing
 "errorCode" in event and event["errorCode"] == "UnauthorizedOperation"
-# Notify about all actions done by root
-"userIdentity.type" in event and event["userIdentity.type"] == "Root"
-# Notify only for non read (Starts from Get/Describe/Head/List etc) and
-# non data events (like PutObject, GetObject, DeleteObject, Inovoke)
-# as well as kms Decrypt
-"eventName" in event and not event["eventName"].startswith(("Get", "Describe", "List", "Head", "DeleteObject", "PutObject", "Invoke", "Decrypt"))
+# Notify about all non-read actions done by root
+"userIdentity.type" in event and event["userIdentity.type"] == "Root" and not event["eventName"].startswith(("Get", "List", "Describe", "Head"))
 ```
 
 ## Requirements
