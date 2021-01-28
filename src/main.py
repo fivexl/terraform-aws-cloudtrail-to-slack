@@ -19,7 +19,7 @@ import base64
 import json
 import gzip
 import os
-import http
+import http.client
 from datetime import datetime
 
 from rules import default_rules
