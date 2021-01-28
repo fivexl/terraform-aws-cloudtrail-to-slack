@@ -80,7 +80,7 @@ def should_message_be_processed(event, rules):
                 print(f'Event "{event_name}"" matched rule:\n{rule}')
                 return True
         except KeyError as error:
-            print(f'Event that failed with KeyError: {flat_event}')
+            print(f'Event parsing failed with KeyError. Rule: {rule}\nEvent:\n {event}\nFlat event:\n {flat_event}')
             raise error
     print(f'did not match any rules: event {event_name} called by {user}')
     return False
