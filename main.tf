@@ -12,7 +12,7 @@ module "lambda" {
   environment_variables = {
     HOOK_URL = var.slack_hook_url
     RULES = var.rules
-    EVENTS_TO_INCLUDE = var.events_to_include
+    EVENTS_TO_TRACK = var.events_to_track
     USE_DEFAULT_RULES = var.use_default_rules
   }
 

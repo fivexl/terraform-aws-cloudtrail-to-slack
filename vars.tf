@@ -15,20 +15,20 @@ variable "cloudtrail_cloudwatch_log_group_name" {
     type        = string 
 }
 
-variable "rules" {
-    description = "List of rules to filter events"
+variable "events_to_track" {
+    description = "Comma-separated list events to track and report"
     default     = ""
     type        = string
 }
 
-variable "events_to_include" {
-    description = "Comma-separated list events to inclide into the filter"
+variable "rules" {
+    description = "Comma-separated list of rules to track events if just event name is not enough"
     default     = ""
     type        = string
 }
 
 variable "use_default_rules" {
-    description = "List of rules to filter events"
+    description = "Should default rules be used"
     default     = true
     type        = bool
 }

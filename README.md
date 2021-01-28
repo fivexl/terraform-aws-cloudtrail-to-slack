@@ -18,7 +18,7 @@ module "cloudtrail_to_slack" {
 }
 ```
 
-Module deployment with user defined and default rule sets
+Module deployment with user defined rules and default rule sets
 
 ```hlc
 # we recomend storing hook url in SSM Parameter store and not commit it to the repo
@@ -31,11 +31,11 @@ module "cloudtrail_to_slack" {
   version                              = "1.0.0"
   slack_hook_url                       = data.aws_ssm_parameter.hook.value
   cloudtrail_cloudwatch_log_group_name = "cloudtrail"
-  rules                                = ["\"errorCode\" in event and event[\"errorCode\"] == \"UnauthorizedOperation\""]
+  rules                                = "'errorCode' in event and event['errorCode'] == 'UnauthorizedOperation','userIdentity.type' in event and event['userIdentity.type'] == 'Root'"
 }
 ```
 
-Module deployment with only user provided rules
+Module deployment with user defined rules, list of events to track and default rule sets
 
 ```hlc
 # we recomend storing hook url in SSM Parameter store and not commit it to the repo
@@ -48,8 +48,8 @@ module "cloudtrail_to_slack" {
   version                              = "1.0.0"
   slack_hook_url                       = data.aws_ssm_parameter.hook.value
   cloudtrail_cloudwatch_log_group_name = "cloudtrail"
-  rules                                = ["\"errorCode\" in event and event[\"errorCode\"] == \"UnauthorizedOperation\""]
-  use_default_rules                    = false
+  rules                                = "'errorCode' in event and event['errorCode'] == 'UnauthorizedOperation','userIdentity.type' in event and event['userIdentity.type'] == 'Root'"
+  events_to_track                      = "CreateUser,StartInstances"
 }
 ```
 
@@ -95,8 +95,8 @@ Default rules
 | function_name | The name of the lambda function | `string` | `fivexl-cloudtrail-to-slack` | no |
 | slack_hook_url | Slack incoming webhook URL. Read how to create it [here](https://api.slack.com/messaging/webhooks) | `string` |  | yes |
 | cloudtrail_cloudwatch_log_group_name | The AWS CloudWatch log group name from where the lambda function will be reading AWS CloudTrail events. Read [here](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/send-cloudtrail-events-to-cloudwatch-logs.html) how to set it up  | `string` | | yes |
-| events_to_include | Comma-separated list events to inclide into the filter. | `string` | `` | no |
-| rules | Rules to use when filtering incoming events. Use this one if you need something more complicated than just event name. See example above for details. Will use default rules provided with the lambda if not specified. | `string` | `` | no |
+| events_to_track | Comma-separated list events to track and report | `string` |  | no |
+| rules | Comma-separated list of rules to track events if just event name is not enough. See example above for details. | `string` |  | no |
 | use_default_rules | Indicates if lambda should be using default rule set supplied with lambda code. If `rules` is also provided then will use both default rules and user defined rules if set to true. | `bool` | true | no |
 | tags | Tags to apply on created resources | `map(string)` | `{}` | no |
 
