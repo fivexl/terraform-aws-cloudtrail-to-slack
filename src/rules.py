@@ -20,8 +20,13 @@
 default_rules = list()
 
 # Notify if someone logged in without MFA but skip notification for SSO logins
-default_rules.append('event["eventName"] == "ConsoleLogin" and event["additionalEventData.MFAUsed"] != "Yes" and "assumed-role/AWSReservedSSO" not in event["userIdentity.arn"]')
-# Notify if someone is trying to do something they not supposed to be doing
-default_rules.append('"errorCode" in event and event["errorCode"] == "UnauthorizedOperation"')
+default_rules.append('event["eventName"] == "ConsoleLogin" ' +
+                     'and event["additionalEventData.MFAUsed"] != "Yes" ' +
+                     'and "assumed-role/AWSReservedSSO" not in event.get("userIdentity.arn", "")')
+# Notify if someone is trying to do something they not supposed to be doing but do not notify
+# about not logged in actions since there are a lot of scans for open buckets that generate noise
+default_rules.append('event.get("errorCode", "") == "UnauthorizedOperation" ' +
+                     'and (event.get("userIdentity.accountId", "") != "ANONYMOUS_PRINCIPAL")')
 # Notify about all non-read actions done by root
-default_rules.append('"userIdentity.type" in event and event["userIdentity.type"] == "Root" and not event["eventName"].startswith(("Get", "List", "Describe", "Head"))')
+default_rules.append('event.get("userIdentity.type", "") == "Root" ' +
+                     'and not event["eventName"].startswith(("Get", "List", "Describe", "Head"))')

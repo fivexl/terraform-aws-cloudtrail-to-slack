@@ -2,9 +2,21 @@
 
 # Terraform module to deploy lambda that sends notifications about AWS CloudTrail events to Slack
 
-Example message
+## Why this module?
+
+This module allows you to get notifications about:
+
+- actions done by root account (According to AWS best practices you should use root account as little as possible and use SSO or IAM users)
+- API calls that failed due to lack of permissions to do so (could be indication of compromise or misconfiguration of your services/applications)
+- console logins without MFA (Always use MFA for you IAM users or SSO)
+- track list of events that you might consider sensetive. Think IAM changes, network changes, data storage (S3, DBs) access changes. Though we recomend keeping that to minimum to avoid alert fatigue
+- define sofisticated rules to track user defined conditions that are not covered by default rules (see examples below)
+
+## Example message
 
 [![Example message](example_message.png)
+
+## How to
 
 Module deployment with default rule set
 
@@ -74,18 +86,28 @@ Default rules
 
 ```python
 # Notify if someone logged in without MFA but skip notification for SSO logins
-"eventName" in event and event["eventName"] == "ConsoleLogin" and event["additionalEventData.MFAUsed"] != "Yes" and "assumed-role/AWSReservedSSO" not in event["userIdentity.arn"]
-# Notify if someone is trying to do something they not supposed to be doing
-"errorCode" in event and event["errorCode"] == "UnauthorizedOperation"
+default_rules.append('event["eventName"] == "ConsoleLogin" ' +
+                     'and event["additionalEventData.MFAUsed"] != "Yes" ' +
+                     'and "assumed-role/AWSReservedSSO" not in event.get("userIdentity.arn", "")')
+
+# Notify if someone is trying to do something they not supposed to be doing but do not notify
+# about not logged in actions since there are a lot of scans for open buckets that generate noise
+# This is useful to discover any misconfigurations in your account. Time to time services will try
+# to do something but fail due to IAM permissions and those errors are very hard to find using
+# other means
+default_rules.append('event.get("errorCode", "") == "UnauthorizedOperation" ' +
+                     'and (event.get("userIdentity.accountId", "") != "ANONYMOUS_PRINCIPAL")')
+
 # Notify about all non-read actions done by root
-"userIdentity.type" in event and event["userIdentity.type"] == "Root" and not event["eventName"].startswith(("Get", "List", "Describe", "Head"))
+default_rules.append('event.get("userIdentity.type", "") == "Root" ' +
+                     'and not event["eventName"].startswith(("Get", "List", "Describe", "Head"))')
 ```
 
 ## Requirements
 
 | Name | Version |
 |------|---------|
-| terraform | >= 0.13 |
+| terraform | >= 0.12 |
 | aws | >= 3.13.0 |
 
 ## Inputs
