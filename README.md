@@ -42,12 +42,23 @@ data "aws_ssm_parameter" "hook" {
   name = "/cloudtrail-to-slack/hook"
 }
 
+locals {
+  # CloudTrail events
+  cloudtrail = "DeleteTrail,StopLogging,UpdateTrail"
+  # EC2 Instance connect and EC2 events
+  ec2 = "SendSSHPublicKey"
+  # Config
+  config = "DeleteConfigRule,DeleteConfigurationRecorder,DeleteDeliveryChannel,DeleteEvaluationResults"
+  # All events
+  events_to_track = "${local.cloudtrail},${local.ec2},${local.config}"
+}
+
 module "cloudtrail_to_slack" {
   source                               = "fivexl/cloudtrail-to-slack/aws"
   version                              = "1.0.0"
   slack_hook_url                       = data.aws_ssm_parameter.hook.value
-  cloudtrail_cloudwatch_log_group_name = "cloudtrail"
-  events_to_track                      = "CreateUser,StartInstances"
+  cloudtrail_cloudwatch_log_group_name = aws_cloudwatch_log_group.cloudtrail.name
+  events_to_track                      = local.events_to_track
 }
 ```
 
