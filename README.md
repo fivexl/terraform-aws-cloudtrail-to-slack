@@ -14,7 +14,7 @@ This module allows you to get notifications about:
 
 ## Example message
 
-![Example message](example_message.png)
+![Example message](https://releases.fivexl.io/example_message.png)
 
 ## Delivery delays
 
