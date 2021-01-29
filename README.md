@@ -16,6 +16,11 @@ This module allows you to get notifications about:
 
 [![Example message](example_message.png)
 
+## Delivery delays
+
+The current implementation built upon parsing of CloudWatch log streams, and thus you should expect a 5 to 15 min lag between action and event notification in Slack.
+If you do not get a notification at all - check CloudWatch logs for the lambda to see if there is any issue with provided filters.
+
 ## How to
 
 Module deployment with the default ruleset
