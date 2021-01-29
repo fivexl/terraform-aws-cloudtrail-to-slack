@@ -14,7 +14,7 @@ This module allows you to get notifications about:
 
 ## Example message
 
-[![Example message](example_message.png)
+![Example message](example_message.png)
 
 ## Delivery delays
 
@@ -121,7 +121,6 @@ So, for instance, to access ARN from the event below, you should use the notatio
   "eventType": "AwsConsoleSignIn",
   "recipientAccountId": "XXXXXXXXXXX"
 }
-```
 ```
 
 ## Default rules
