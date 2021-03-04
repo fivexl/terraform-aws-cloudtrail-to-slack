@@ -33,7 +33,7 @@ data "aws_ssm_parameter" "hook" {
 
 module "cloudtrail_to_slack" {
   source                               = "fivexl/cloudtrail-to-slack/aws"
-  version                              = "1.0.0"
+  version                              = "1.0.2"
   slack_hook_url                       = data.aws_ssm_parameter.hook.value
   cloudtrail_cloudwatch_log_group_name = "cloudtrail"
 }
@@ -60,7 +60,7 @@ locals {
 
 module "cloudtrail_to_slack" {
   source                               = "fivexl/cloudtrail-to-slack/aws"
-  version                              = "1.0.0"
+  version                              = "1.0.2"
   slack_hook_url                       = data.aws_ssm_parameter.hook.value
   cloudtrail_cloudwatch_log_group_name = aws_cloudwatch_log_group.cloudtrail.name
   events_to_track                      = local.events_to_track
@@ -77,7 +77,7 @@ data "aws_ssm_parameter" "hook" {
 
 module "cloudtrail_to_slack" {
   source                               = "fivexl/cloudtrail-to-slack/aws"
-  version                              = "1.0.0"
+  version                              = "1.0.2"
   slack_hook_url                       = data.aws_ssm_parameter.hook.value
   cloudtrail_cloudwatch_log_group_name = "cloudtrail"
   rules                                = "'errorCode' in event and event['errorCode'] == 'UnauthorizedOperation','userIdentity.type' in event and event['userIdentity.type'] == 'Root'"
