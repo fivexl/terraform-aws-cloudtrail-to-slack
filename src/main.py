@@ -64,7 +64,8 @@ def lambda_handler(event, context):
         events_list = events_to_track.replace(" ", "").split(",")
         rules.append(f'"eventName" in event and event["eventName"] in {json.dumps(events_list)}')
     if not rules:
-        raise Exception("Have no rules to apply!!! Check configuration - add some rules or enable default rules")
+        raise Exception('Have no rules to apply!!! '
+                        + 'Check configuration - add some rules or enable default rules')
     print(f'Going to use the following rules:\n{rules}')
     compressed_payload = base64.b64decode(event['awslogs']['data'])
     uncompressed_payload = gzip.decompress(compressed_payload)
@@ -87,8 +88,9 @@ def should_message_be_processed(event, rules):
             if eval(rule, {}, {'event': flat_event}) is True:
                 print(f'Event "{flat_event}"" matched rule:\n{rule}')
                 return True
-        except:
-            print(f'Event parsing failed: {sys.exc_info()[0]}. Rule: {rule}\nEvent:\n {event}\nFlat event:\n {flat_event}')
+        except Exception:
+            print(f'Event parsing failed: {sys.exc_info()[0]}. '
+                  + 'Rule: {rule}\nEvent:\n {event}\nFlat event:\n {flat_event}')
             raise
     print(f'did not match any rules: event {event_name} called by {user}')
     return False
