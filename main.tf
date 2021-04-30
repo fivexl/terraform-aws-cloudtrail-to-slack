@@ -11,9 +11,9 @@ module "lambda" {
   source_path = "${path.module}/src/"
 
   environment_variables = {
-    HOOK_URL = var.slack_hook_url
-    RULES = var.rules
-    EVENTS_TO_TRACK = var.events_to_track
+    HOOK_URL          = var.slack_hook_url
+    RULES             = var.rules
+    EVENTS_TO_TRACK   = var.events_to_track
     USE_DEFAULT_RULES = var.use_default_rules
   }
 
