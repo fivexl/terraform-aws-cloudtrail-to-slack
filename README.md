@@ -145,6 +145,29 @@ default_rules.append('event.get("userIdentity.type", "") == "Root" ' +
                      'and not event["eventName"].startswith(("Get", "List", "Describe", "Head"))')
 ```
 
+## Examples
+### Catch SSM Session events for the "111111111" account
+```hcl
+locals {
+  cloudtrail_rules = [
+      "'userIdentity.accountId' in event and event['userIdentity.accountId'] == '11111111111' and event['eventSource'] == 'ssm.amazonaws.com' and event['eventName'].endswith(('Session'))",
+    ]
+}
+
+# we recomend storing hook url in SSM Parameter store and not commit it to the repo
+data "aws_ssm_parameter" "hook" {
+  name = "/cloudtrail-to-slack/hook"
+}
+
+module "cloudtrail_to_slack" {
+  source                               = "fivexl/cloudtrail-to-slack/aws"
+  version                              = "1.0.4"
+  slack_hook_url                       = data.aws_ssm_parameter.hook.value
+  cloudtrail_cloudwatch_log_group_name = "cloudtrail"
+  rules                                = join(",", local.cloudtrail_rules)
+}
+```
+
 ## Requirements
 
 | Name | Version |
