@@ -11,10 +11,12 @@ module "lambda" {
   source_path = "${path.module}/src/"
 
   environment_variables = {
-    HOOK_URL          = var.slack_hook_url
-    RULES             = var.rules
-    EVENTS_TO_TRACK   = var.events_to_track
-    USE_DEFAULT_RULES = var.use_default_rules
+    HOOK_URL           = var.slack_hook_url
+    TEST_MODE          = var.enable_test_mode ? "Enable" : ""
+    HOOK_URL_TEST_MODE = var.slack_hook_url_test_mode
+    RULES              = var.rules
+    EVENTS_TO_TRACK    = var.events_to_track
+    USE_DEFAULT_RULES  = var.use_default_rules
   }
 
   cloudwatch_logs_retention_in_days = 30
