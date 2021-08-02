@@ -50,7 +50,10 @@ def read_env_variable_or_die(env_var_name):
 
 
 def lambda_handler(event, context):
-    hook_url = read_env_variable_or_die('HOOK_URL')
+    if os.environ.get('TEST_MODE', None):
+        hook_url = read_env_variable_or_die('HOOK_URL_TEST_MODE')
+    else
+        hook_url = read_env_variable_or_die('HOOK_URL')    
     user_rules = os.environ.get('RULES', None)
     use_default_rules = os.environ.get('USE_DEFAULT_RULES', None)
     events_to_track = os.environ.get('EVENTS_TO_TRACK', None)
