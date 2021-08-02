@@ -10,6 +10,18 @@ variable "slack_hook_url" {
   type        = string
 }
 
+variable "slack_hook_url_test_mode" {
+  description = "Slack incoming webhook URL for recieve envent in test mode"
+  type        = string
+  default     = ""
+}
+
+variable "enable_test_mode" {
+  description = "Enable Test mode and send events to `slack_hook_url_test_mode`"
+  type        = bool
+  default     = false
+}
+
 variable "cloudtrail_cloudwatch_log_group_name" {
   description = "Name of the CloudWatch log group that contains CloudTrail events"
   type        = string
