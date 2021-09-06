@@ -10,12 +10,14 @@ module "lambda" {
 
   source_path = "${path.module}/src/"
 
-  environment_variables = {
-    HOOK_URL          = var.slack_hook_url
-    RULES             = var.rules
-    EVENTS_TO_TRACK   = var.events_to_track
-    USE_DEFAULT_RULES = var.use_default_rules
-  }
+  environment_variables = merge(
+    {
+      HOOK_URL        = var.slack_hook_url
+      RULES           = var.rules
+      EVENTS_TO_TRACK = var.events_to_track
+    },
+    var.use_default_rules ? { USE_DEFAULT_RULES = "True" } : {}
+  )
 
   cloudwatch_logs_retention_in_days = 30
 
