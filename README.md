@@ -33,7 +33,7 @@ data "aws_ssm_parameter" "hook" {
 
 module "cloudtrail_to_slack" {
   source                               = "fivexl/cloudtrail-to-slack/aws"
-  version                              = "1.0.3"
+  version                              = "1.0.5"
   slack_hook_url                       = data.aws_ssm_parameter.hook.value
   cloudtrail_cloudwatch_log_group_name = "cloudtrail"
 }
@@ -60,7 +60,7 @@ locals {
 
 module "cloudtrail_to_slack" {
   source                               = "fivexl/cloudtrail-to-slack/aws"
-  version                              = "1.0.3"
+  version                              = "1.0.5"
   slack_hook_url                       = data.aws_ssm_parameter.hook.value
   cloudtrail_cloudwatch_log_group_name = aws_cloudwatch_log_group.cloudtrail.name
   events_to_track                      = local.events_to_track
@@ -77,7 +77,7 @@ data "aws_ssm_parameter" "hook" {
 
 module "cloudtrail_to_slack" {
   source                               = "fivexl/cloudtrail-to-slack/aws"
-  version                              = "1.0.3"
+  version                              = "1.0.5"
   slack_hook_url                       = data.aws_ssm_parameter.hook.value
   cloudtrail_cloudwatch_log_group_name = "cloudtrail"
   rules                                = "'errorCode' in event and event['errorCode'] == 'UnauthorizedOperation','userIdentity.type' in event and event['userIdentity.type'] == 'Root'"
@@ -161,37 +161,59 @@ data "aws_ssm_parameter" "hook" {
 
 module "cloudtrail_to_slack" {
   source                               = "fivexl/cloudtrail-to-slack/aws"
-  version                              = "1.0.4"
+  version                              = "1.0.5"
   slack_hook_url                       = data.aws_ssm_parameter.hook.value
   cloudtrail_cloudwatch_log_group_name = "cloudtrail"
   rules                                = join(",", local.cloudtrail_rules)
 }
 ```
 
+## License
+
+Apache 2 Licensed. See LICENSE for full details.
+
 ## Requirements
 
 | Name | Version |
 |------|---------|
-| terraform | >= 0.12 |
-| aws | >= 3.13.0 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 0.12.31 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.43 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.43 |
+
+## Modules
+
+| Name | Source | Version |
+|------|--------|---------|
+| <a name="module_lambda"></a> [lambda](#module\_lambda) | terraform-aws-modules/lambda/aws | 2.16.0 |
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [aws_cloudwatch_log_subscription_filter.logfilter](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_subscription_filter) | resource |
+| [aws_lambda_permission.permission](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
+| [aws_cloudwatch_log_group.cloudtrail](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/cloudwatch_log_group) | data source |
+| [aws_region.r](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| function_name | The name of the lambda function | `string` | `fivexl-cloudtrail-to-slack` | no |
-| slack_hook_url | Slack incoming webhook URL. Read how to create it [here](https://api.slack.com/messaging/webhooks) | `string` |  | yes |
-| cloudtrail_cloudwatch_log_group_name | The AWS CloudWatch log group name from where the lambda function will be reading AWS CloudTrail events. Read [here](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/send-cloudtrail-events-to-cloudwatch-logs.html) how to set it up  | `string` | | yes |
-| events_to_track | Comma-separated list events to track and report | `string` |  | no |
-| rules | Comma-separated list of rules to track events if just event name is not enough. See the example above for details. | `string` |  | no |
-| use_default_rules | Indicates if lambda should be using default ruleset supplied with lambda code. | `bool` | true | no |
-| tags | Tags to apply on created resources | `map(string)` | `{}` | no |
+| <a name="input_cloudtrail_cloudwatch_log_group_name"></a> [cloudtrail\_cloudwatch\_log\_group\_name](#input\_cloudtrail\_cloudwatch\_log\_group\_name) | Name of the CloudWatch log group that contains CloudTrail events. Read [here](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/send-cloudtrail-events-to-cloudwatch-logs.html) how to set it up | `string` | n/a | yes |
+| <a name="input_events_to_track"></a> [events\_to\_track](#input\_events\_to\_track) | Comma-separated list events to track and report | `string` | `""` | no |
+| <a name="input_function_name"></a> [function\_name](#input\_function\_name) | Lambda function name | `string` | `"fivexl-cloudtrail-to-slack"` | no |
+| <a name="input_rules"></a> [rules](#input\_rules) | Comma-separated list of rules to track events if just event name is not enough | `string` | `""` | no |
+| <a name="input_slack_hook_url"></a> [slack\_hook\_url](#input\_slack\_hook\_url) | Slack incoming webhook URL. Read how to create it [here](https://api.slack.com/messaging/webhooks) | `string` | n/a | yes |
+| <a name="input_tags"></a> [tags](#input\_tags) | Tags to attach to resources | `map(string)` | `{}` | no |
+| <a name="input_use_default_rules"></a> [use\_default\_rules](#input\_use\_default\_rules) | Should default rules be used | `bool` | `true` | no |
 
 ## Outputs
 
 | Name | Description |
 |------|-------------|
-
-## License
-
-Apache 2 Licensed. See LICENSE for full details.
+| <a name="output_lambda_function_arn"></a> [lambda\_function\_arn](#output\_lambda\_function\_arn) | The ARN of the Lambda Function |
