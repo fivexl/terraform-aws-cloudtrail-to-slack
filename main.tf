@@ -1,6 +1,6 @@
 module "lambda" {
   source  = "terraform-aws-modules/lambda/aws"
-  version = "2.16.0"
+  version = "2.22.0"
 
   function_name = var.function_name
   description   = "Send CloudTrail Events to Slack"
@@ -21,27 +21,47 @@ module "lambda" {
 
   cloudwatch_logs_retention_in_days = 30
 
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.s3.json
+
   tags = var.tags
 }
 
-data "aws_region" "r" {
+data "aws_iam_policy_document" "s3" {
+  statement {
+    sid = "AllowLambdaToGetObjects"
+
+    actions = [
+      "s3:GetObject",
+    ]
+
+    resources = [
+      "${data.aws_s3_bucket.cloudtrail.arn}/*",
+    ]
+  }
 }
 
-data "aws_cloudwatch_log_group" "cloudtrail" {
-  name = var.cloudtrail_cloudwatch_log_group_name
+data "aws_s3_bucket" "cloudtrail" {
+  bucket = var.cloudtrail_logs_s3_bucket_name
 }
 
-resource "aws_lambda_permission" "permission" {
-  statement_id  = "AllowExecutionFromCloudWatchLogs"
+resource "aws_lambda_permission" "s3" {
+  statement_id  = "AllowExecutionFromS3Bucket"
   action        = "lambda:InvokeFunction"
   function_name = module.lambda.lambda_function_name
-  source_arn    = data.aws_cloudwatch_log_group.cloudtrail.arn
-  principal     = "logs.${data.aws_region.r.name}.amazonaws.com"
+  principal     = "s3.amazonaws.com"
+  source_arn    = data.aws_s3_bucket.cloudtrail.arn
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "logfilter" {
-  name            = var.function_name
-  log_group_name  = data.aws_cloudwatch_log_group.cloudtrail.name
-  filter_pattern  = ""
-  destination_arn = module.lambda.lambda_function_arn
+resource "aws_s3_bucket_notification" "bucket_notification" {
+  bucket = data.aws_s3_bucket.cloudtrail.id
+
+  lambda_function {
+    lambda_function_arn = module.lambda.lambda_function_arn
+    events              = ["s3:ObjectCreated:*","s3:ObjectRemoved:*"]
+    filter_prefix       = "AWSLogs/"
+    filter_suffix       = ".json.gz"
+  }
+
+  depends_on = [aws_lambda_permission.s3]
 }

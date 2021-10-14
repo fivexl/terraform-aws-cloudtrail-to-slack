@@ -10,8 +10,8 @@ variable "slack_hook_url" {
   type        = string
 }
 
-variable "cloudtrail_cloudwatch_log_group_name" {
-  description = "Name of the CloudWatch log group that contains CloudTrail events"
+variable "cloudtrail_logs_s3_bucket_name" {
+  description = "Name of the CloudWatch log s3 bucket that contains CloudTrail events"
   type        = string
 }
 

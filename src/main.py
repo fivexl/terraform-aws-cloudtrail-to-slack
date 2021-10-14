@@ -21,6 +21,8 @@ import gzip
 import sys
 import os
 import http.client
+import boto3
+import urllib
 from datetime import datetime
 
 from rules import default_rules
@@ -49,7 +51,36 @@ def read_env_variable_or_die(env_var_name):
     return value
 
 
+def get_cloudtrail_log_records(event):
+    # Get all the files from S3 so we can process them
+    records = []
+
+    s3 = boto3.client('s3')
+    for record in event['Records']:
+        # In case if we get something unexpected
+        if 's3' not in record:
+                raise AssertionError(f'recieved record does not contain s3 section: {record}')
+        bucket = record['s3']['bucket']['name']
+        key = urllib.parse.unquote_plus(record['s3']['object']['key'], encoding='utf-8')
+        # Do not process digest files
+        if 'Digest' in key:
+            continue
+        try:
+            response = s3.get_object(Bucket=bucket, Key=key)
+            print(response)
+            with gzip.GzipFile(fileobj=response["Body"]) as gzipfile:
+                content = gzipfile.read()
+            content_as_json = json.loads(content.decode('utf8'))
+            records.append({'key': key, 'events': content_as_json['Records'], 'eventName': record['eventName']})
+        except Exception as e:
+            print(e)
+            print(f'Error getting object {key} from bucket {bucket}')
+            raise e
+    return records
+
+
 def lambda_handler(event, context):
+
     hook_url = read_env_variable_or_die('HOOK_URL')
     user_rules = os.environ.get('RULES', None)
     use_default_rules = os.environ.get('USE_DEFAULT_RULES', None)
@@ -67,13 +98,14 @@ def lambda_handler(event, context):
         raise Exception('Have no rules to apply!!! '
                         + 'Check configuration - add some rules or enable default rules')
     print(f'Going to use the following rules:\n{rules}')
-    compressed_payload = base64.b64decode(event['awslogs']['data'])
-    uncompressed_payload = gzip.decompress(compressed_payload)
-    payload = json.loads(uncompressed_payload)
 
-    log_events = payload['logEvents']
-    for log_event in log_events:
-        handle_event(json.loads(log_event['message']), rules, hook_url)
+    records = get_cloudtrail_log_records(event)
+    for record in records:
+        if 's3:ObjectRemoved' in record['eventName']:
+            # Handle deletion
+            continue
+        for log_event in record['events']:
+            handle_event(log_event, record['key'], rules, hook_url)
 
     return 200
 
@@ -97,14 +129,14 @@ def should_message_be_processed(event, rules):
 
 
 # Handle events
-def handle_event(event, rules, hook_url):
+def handle_event(event, source_file, rules, hook_url):
     if should_message_be_processed(event, rules) is not True:
         return
     # log full event if it is AccessDenied
     if ('errorCode' in event and 'AccessDenied' in event['errorCode']):
         event_as_string = json.dumps(event, indent=4)
         print(f'errorCode == AccessDenied; log full event: {event_as_string}')
-    message = event_to_slack_message(event)
+    message = event_to_slack_message(event, source_file)
     response = post_slack_message(hook_url, message)
     if response != 200:
         raise Exception('Failed to send message to Slack!')
@@ -131,7 +163,7 @@ def flatten_json(y):
 
 
 # Format message
-def event_to_slack_message(event):
+def event_to_slack_message(event, source_file):
 
     event_name = event['eventName']
     error_code = event['errorCode'] if 'errorCode' in event else None
@@ -202,6 +234,11 @@ def event_to_slack_message(event):
     contexts.append({
         'type': 'mrkdwn',
         'text': f'Time: {event_time} UTC Id: {event_id} Account Id: {account_id}'
+    })
+
+    contexts.append({
+        'type': 'mrkdwn',
+        'text': f'Event location in s3: {source_file}'
     })
 
     blocks.append({
