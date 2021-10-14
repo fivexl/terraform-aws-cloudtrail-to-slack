@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import base64
 import json
 import gzip
 import sys
@@ -59,7 +58,7 @@ def get_cloudtrail_log_records(event):
     for record in event['Records']:
         # In case if we get something unexpected
         if 's3' not in record:
-                raise AssertionError(f'recieved record does not contain s3 section: {record}')
+            raise AssertionError(f'recieved record does not contain s3 section: {record}')
         bucket = record['s3']['bucket']['name']
         key = urllib.parse.unquote_plus(record['s3']['object']['key'], encoding='utf-8')
         # Do not process digest files
@@ -70,7 +69,13 @@ def get_cloudtrail_log_records(event):
             with gzip.GzipFile(fileobj=response["Body"]) as gzipfile:
                 content = gzipfile.read()
             content_as_json = json.loads(content.decode('utf8'))
-            records.append({'key': key, 'events': content_as_json['Records'], 'eventName': record['eventName']})
+            records.append(
+                {
+                    'key': key,
+                    'events': content_as_json['Records'],
+                    'eventName': record['eventName']
+                }
+            )
         except Exception as e:
             print(e)
             print(f'Error getting object {key} from bucket {bucket}')
@@ -283,4 +288,4 @@ if __name__ == '__main__':
     with open('./test/events.json') as f:
         data = json.load(f)
     for event in data:
-        handle_event(event, default_rules, hook_url)
+        handle_event(event, 'file_name', default_rules, hook_url)
