@@ -173,7 +173,7 @@ def event_to_slack_message(event, source_file):
     event_time = datetime.strptime(event['eventTime'], '%Y-%m-%dT%H:%M:%SZ')
     event_id = event['eventID']
     actor = event['userIdentity']['arn'] if 'arn' in event['userIdentity'] else event['userIdentity']
-    account_id = event['userIdentity']['AccountId'] if 'AccountId' in event['userIdentity'] else ''
+    account_id = event['userIdentity']['accountId'] if 'accountId' in event['userIdentity'] else ''
     title = f'*{actor}* called *{event_name}*'
     if error_code is not None:
         title = f':warning: {title} but failed due to ```{error_code}``` :warning:'
