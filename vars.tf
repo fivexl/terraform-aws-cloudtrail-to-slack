@@ -33,6 +33,12 @@ variable "use_default_rules" {
   type        = bool
 }
 
+variable "dead_letter_target_arn" {
+  description = "The ARN of an SNS topic or SQS queue to notify when an invocation fails."
+  type        = string
+  default     = null
+}
+
 variable "tags" {
   description = "Tags to attach to resources"
   default     = {}

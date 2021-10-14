@@ -24,6 +24,9 @@ module "lambda" {
   attach_policy_json = true
   policy_json        = data.aws_iam_policy_document.s3.json
 
+  dead_letter_target_arn    = var.dead_letter_target_arn
+  attach_dead_letter_policy = var.dead_letter_target_arn != null ? true : false
+
   tags = var.tags
 }
 
