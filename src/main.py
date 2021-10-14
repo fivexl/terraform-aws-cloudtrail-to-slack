@@ -67,7 +67,6 @@ def get_cloudtrail_log_records(event):
             continue
         try:
             response = s3.get_object(Bucket=bucket, Key=key)
-            print(response)
             with gzip.GzipFile(fileobj=response["Body"]) as gzipfile:
                 content = gzipfile.read()
             content_as_json = json.loads(content.decode('utf8'))
