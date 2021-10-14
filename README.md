@@ -11,6 +11,7 @@ This module allows you to get notifications about:
 - console logins without MFA (Always use MFA for you IAM users or SSO)
 - track a list of events that you might consider sensitive. Think IAM changes, network changes, data storage (S3, DBs) access changes. Though we recommend keeping that to a minimum to avoid alert fatigue
 - define sophisticated rules to track user-defined conditions that are not covered by default rules (see examples below)
+- send notifications to different Slack channels based on event account id
 
 ## Example message
 
@@ -32,10 +33,66 @@ data "aws_ssm_parameter" "hook" {
 }
 
 module "cloudtrail_to_slack" {
-  source                               = "fivexl/cloudtrail-to-slack/aws"
-  version                              = "1.0.5"
-  slack_hook_url                       = data.aws_ssm_parameter.hook.value
-  cloudtrail_cloudwatch_log_group_name = "cloudtrail"
+  source                         = "fivexl/cloudtrail-to-slack/aws"
+  version                        = "2.0.0"
+  default_slack_hook_url         = data.aws_ssm_parameter.hook.value
+  cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
+}
+
+resource "aws_cloudtrail" "main" {
+  name           = "main"
+  s3_bucket_name = aws_s3_bucket.cloudtrail.id
+  ...
+}
+
+resource "aws_s3_bucket" "cloudtrail" {
+  ....
+}
+```
+
+Module deployment with the default ruleset and different slack channels for different accounts
+
+```hlc
+# we recomend storing hook url in SSM Parameter store and not commit it to the repo
+data "aws_ssm_parameter" "default_hook" {
+  name = "/cloudtrail-to-slack/default_hook"
+}
+
+data "aws_ssm_parameter" "dev_hook" {
+  name = "/cloudtrail-to-slack/dev_hook"
+}
+
+data "aws_ssm_parameter" "prod_hook" {
+  name = "/cloudtrail-to-slack/prod_hook"
+}
+
+module "cloudtrail_to_slack" {
+  source                         = "fivexl/cloudtrail-to-slack/aws"
+  version                        = "2.0.0"
+  default_slack_hook_url         = data.aws_ssm_parameter.default_hook.value
+
+  configuration = [
+    {
+      "accounts": ["123456789"],
+      "slack_hook_url": data.aws_ssm_parameter.dev_hook.value
+    },
+    {
+      "accounts": ["987654321"],
+      "slack_hook_url": data.aws_ssm_parameter.prod_hook.value
+    }
+  ]
+
+  cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
+}
+
+resource "aws_cloudtrail" "main" {
+  name           = "main"
+  s3_bucket_name = aws_s3_bucket.cloudtrail.id
+  ...
+}
+
+resource "aws_s3_bucket" "cloudtrail" {
+  ....
 }
 ```
 
@@ -59,11 +116,21 @@ locals {
 }
 
 module "cloudtrail_to_slack" {
-  source                               = "fivexl/cloudtrail-to-slack/aws"
-  version                              = "1.0.5"
-  slack_hook_url                       = data.aws_ssm_parameter.hook.value
-  cloudtrail_cloudwatch_log_group_name = aws_cloudwatch_log_group.cloudtrail.name
-  events_to_track                      = local.events_to_track
+  source                         = "fivexl/cloudtrail-to-slack/aws"
+  version                        = "2.0.0"
+  default_slack_hook_url         = data.aws_ssm_parameter.hook.value
+  cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
+  events_to_track                = local.events_to_track
+}
+
+resource "aws_cloudtrail" "main" {
+  name           = "main"
+  s3_bucket_name = aws_s3_bucket.cloudtrail.id
+  ...
+}
+
+resource "aws_s3_bucket" "cloudtrail" {
+  ....
 }
 ```
 
@@ -76,12 +143,34 @@ data "aws_ssm_parameter" "hook" {
 }
 
 module "cloudtrail_to_slack" {
-  source                               = "fivexl/cloudtrail-to-slack/aws"
-  version                              = "1.0.5"
-  slack_hook_url                       = data.aws_ssm_parameter.hook.value
-  cloudtrail_cloudwatch_log_group_name = "cloudtrail"
-  rules                                = "'errorCode' in event and event['errorCode'] == 'UnauthorizedOperation','userIdentity.type' in event and event['userIdentity.type'] == 'Root'"
-  events_to_track                      = "CreateUser,StartInstances"
+  source                         = "fivexl/cloudtrail-to-slack/aws"
+  version                        = "2.0.0"
+  default_slack_hook_url         = data.aws_ssm_parameter.hook.value
+  cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
+  rules                          = "'errorCode' in event and event['errorCode'] == 'UnauthorizedOperation','userIdentity.type' in event and event['userIdentity.type'] == 'Root'"
+  events_to_track                = "CreateUser,StartInstances"
+}
+```
+
+Catch SSM Session events for the "111111111" account
+```hcl
+locals {
+  cloudtrail_rules = [
+      "'userIdentity.accountId' in event and event['userIdentity.accountId'] == '11111111111' and event['eventSource'] == 'ssm.amazonaws.com' and event['eventName'].endswith(('Session'))",
+    ]
+}
+
+# we recomend storing hook url in SSM Parameter store and not commit it to the repo
+data "aws_ssm_parameter" "hook" {
+  name = "/cloudtrail-to-slack/hook"
+}
+
+module "cloudtrail_to_slack" {
+  source                         = "fivexl/cloudtrail-to-slack/aws"
+  version                        = "2.0.0"
+  default_slack_hook_url         = data.aws_ssm_parameter.hook.value
+  cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
+  rules                          = join(",", local.cloudtrail_rules)
 }
 ```
 
@@ -143,29 +232,6 @@ default_rules.append('event.get("errorCode", "") == "AccessDenied" ' +
 # Notify about all non-read actions done by root
 default_rules.append('event.get("userIdentity.type", "") == "Root" ' +
                      'and not event["eventName"].startswith(("Get", "List", "Describe", "Head"))')
-```
-
-## Examples
-### Catch SSM Session events for the "111111111" account
-```hcl
-locals {
-  cloudtrail_rules = [
-      "'userIdentity.accountId' in event and event['userIdentity.accountId'] == '11111111111' and event['eventSource'] == 'ssm.amazonaws.com' and event['eventName'].endswith(('Session'))",
-    ]
-}
-
-# we recomend storing hook url in SSM Parameter store and not commit it to the repo
-data "aws_ssm_parameter" "hook" {
-  name = "/cloudtrail-to-slack/hook"
-}
-
-module "cloudtrail_to_slack" {
-  source                               = "fivexl/cloudtrail-to-slack/aws"
-  version                              = "1.0.5"
-  slack_hook_url                       = data.aws_ssm_parameter.hook.value
-  cloudtrail_cloudwatch_log_group_name = "cloudtrail"
-  rules                                = join(",", local.cloudtrail_rules)
-}
 ```
 
 ## License
