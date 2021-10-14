@@ -78,12 +78,26 @@ def get_cloudtrail_log_records(event):
     return records
 
 
+def get_account_id_from_event(event):
+    return event['userIdentity']['accountId'] if 'accountId' in event['userIdentity'] else ''
+
+
+def get_hook_url_for_account(event, configuration, default_hook_url):
+    accoun_id = get_account_id_from_event(event)
+    hook_url = [cfg['slack_hook_url'] for cfg in configuration if accoun_id in cfg['accounts']]
+    if len(hook_url) > 0:
+        return hook_url[0]
+    return default_hook_url
+
+
 def lambda_handler(event, context):
 
-    hook_url = read_env_variable_or_die('HOOK_URL')
+    default_hook_url = read_env_variable_or_die('HOOK_URL')
     user_rules = os.environ.get('RULES', None)
     use_default_rules = os.environ.get('USE_DEFAULT_RULES', None)
     events_to_track = os.environ.get('EVENTS_TO_TRACK', None)
+    configuration = os.environ.get('CONFIGURATION', None)
+    configuration_as_json = json.loads(configuration) if configuration else []
     rules = []
     if use_default_rules:
         rules += default_rules
@@ -101,9 +115,10 @@ def lambda_handler(event, context):
     records = get_cloudtrail_log_records(event)
     for record in records:
         if 's3:ObjectRemoved' in record['eventName']:
-            # Handle deletion
+            # TODO: Handle deletion
             continue
         for log_event in record['events']:
+            hook_url = get_hook_url_for_account(log_event, configuration_as_json, default_hook_url)
             handle_event(log_event, record['key'], rules, hook_url)
 
     return 200
@@ -173,7 +188,7 @@ def event_to_slack_message(event, source_file):
     event_time = datetime.strptime(event['eventTime'], '%Y-%m-%dT%H:%M:%SZ')
     event_id = event['eventID']
     actor = event['userIdentity']['arn'] if 'arn' in event['userIdentity'] else event['userIdentity']
-    account_id = event['userIdentity']['accountId'] if 'accountId' in event['userIdentity'] else ''
+    account_id = get_account_id_from_event(event)
     title = f'*{actor}* called *{event_name}*'
     if error_code is not None:
         title = f':warning: {title} but failed due to ```{error_code}``` :warning:'
@@ -232,12 +247,22 @@ def event_to_slack_message(event, source_file):
 
     contexts.append({
         'type': 'mrkdwn',
-        'text': f'Time: {event_time} UTC Id: {event_id} Account Id: {account_id}'
+        'text': f'Time: {event_time} UTC'
     })
 
     contexts.append({
         'type': 'mrkdwn',
-        'text': f'Event location in s3: {source_file}'
+        'text': f'Id: {event_id}'
+    })
+
+    contexts.append({
+        'type': 'mrkdwn',
+        'text': f'Account Id: {account_id}'
+    })
+
+    contexts.append({
+        'type': 'mrkdwn',
+        'text': f'Event location in s3:\n{source_file}'
     })
 
     blocks.append({

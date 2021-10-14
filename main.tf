@@ -12,9 +12,10 @@ module "lambda" {
 
   environment_variables = merge(
     {
-      HOOK_URL        = var.slack_hook_url
+      HOOK_URL        = var.default_slack_hook_url
       RULES           = var.rules
       EVENTS_TO_TRACK = var.events_to_track
+      CONFIGURATION   = var.configuration != null ? jsonencode(var.configuration) : ""
     },
     var.use_default_rules ? { USE_DEFAULT_RULES = "True" } : {}
   )

@@ -5,8 +5,17 @@ variable "function_name" {
   type        = string
 }
 
-variable "slack_hook_url" {
-  description = "Slack incoming webhook URL"
+variable "configuration" {
+  description = "Allows to configure slack web hook url per account(s) so you can separate events from different accounts to different channels. Useful in context of AWS organization"
+  type = list(object({
+    accounts       = list(string)
+    slack_hook_url = string
+  }))
+  default = null
+}
+
+variable "default_slack_hook_url" {
+  description = "Slack incoming webhook URL to be used if AWS account id does not match any account id from configuration variable"
   type        = string
 }
 
