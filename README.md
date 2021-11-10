@@ -256,7 +256,7 @@ Apache 2 Licensed. See LICENSE for full details.
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_lambda"></a> [lambda](#module\_lambda) | terraform-aws-modules/lambda/aws | 2.22.0 |
+| <a name="module_lambda"></a> [lambda](#module\_lambda) | terraform-aws-modules/lambda/aws | 2.25.0 |
 
 ## Resources
 
