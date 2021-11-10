@@ -6,6 +6,7 @@ module "lambda" {
   description   = "Send CloudTrail Events to Slack"
   handler       = "main.lambda_handler"
   runtime       = "python3.8"
+  timeout       = var.lambda_timeout_seconds
   publish       = true
 
   source_path = "${path.module}/src/"
@@ -20,7 +21,7 @@ module "lambda" {
     var.use_default_rules ? { USE_DEFAULT_RULES = "True" } : {}
   )
 
-  cloudwatch_logs_retention_in_days = 30
+  cloudwatch_logs_retention_in_days = var.lambda_logs_retention_in_days
 
   attach_policy_json = true
   policy_json        = data.aws_iam_policy_document.s3.json

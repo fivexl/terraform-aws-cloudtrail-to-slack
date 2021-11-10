@@ -48,6 +48,18 @@ variable "dead_letter_target_arn" {
   default     = null
 }
 
+variable "lambda_timeout_seconds" {
+  description = "Controls lambda timeout setting."
+  type        = number
+  default     = 30
+}
+
+variable "lambda_logs_retention_in_days" {
+  description = "Controls for how long to keep lambda logs."
+  type        = number
+  default     = 30
+}
+
 variable "tags" {
   description = "Tags to attach to resources"
   default     = {}
