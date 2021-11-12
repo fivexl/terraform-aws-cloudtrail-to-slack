@@ -153,6 +153,7 @@ module "cloudtrail_to_slack" {
 ```
 
 Catch SSM Session events for the "111111111" account
+
 ```hcl
 locals {
   cloudtrail_rules = [
@@ -171,6 +172,29 @@ module "cloudtrail_to_slack" {
   default_slack_hook_url         = data.aws_ssm_parameter.hook.value
   cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
   rules                          = join(",", local.cloudtrail_rules)
+}
+```
+
+Ignore events from the account "111111111". Note! We do recomend fixing alerts instead of ignoring them. But if there is no way you can fix it then there is a way to suppress events by providing ignore rules
+
+```hcl
+locals {
+  cloudtrail_ignore_rules = [
+      "'userIdentity.accountId' in event and event['userIdentity.accountId'] == '11111111111'",
+    ]
+}
+
+# we recomend storing hook url in SSM Parameter store and not commit it to the repo
+data "aws_ssm_parameter" "hook" {
+  name = "/cloudtrail-to-slack/hook"
+}
+
+module "cloudtrail_to_slack" {
+  source                         = "fivexl/cloudtrail-to-slack/aws"
+  version                        = "2.3.0"
+  default_slack_hook_url         = data.aws_ssm_parameter.hook.value
+  cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
+  ignore_rules                   = join(",", local.cloudtrail_ignore_rules)
 }
 ```
 
@@ -250,7 +274,7 @@ Apache 2 Licensed. See LICENSE for full details.
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.43 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 3.62.0 |
 
 ## Modules
 
@@ -279,6 +303,7 @@ Apache 2 Licensed. See LICENSE for full details.
 | <a name="input_default_slack_hook_url"></a> [default\_slack\_hook\_url](#input\_default\_slack\_hook\_url) | Slack incoming webhook URL to be used if AWS account id does not match any account id from configuration variable | `string` | n/a | yes |
 | <a name="input_events_to_track"></a> [events\_to\_track](#input\_events\_to\_track) | Comma-separated list events to track and report | `string` | `""` | no |
 | <a name="input_function_name"></a> [function\_name](#input\_function\_name) | Lambda function name | `string` | `"fivexl-cloudtrail-to-slack"` | no |
+| <a name="input_ignore_rules"></a> [ignore\_rules](#input\_ignore\_rules) | Comma-separated list of rules to ignore events if you need to suppress something. Will be applied before rules and default\_rules | `string` | `""` | no |
 | <a name="input_lambda_logs_retention_in_days"></a> [lambda\_logs\_retention\_in\_days](#input\_lambda\_logs\_retention\_in\_days) | Controls for how long to keep lambda logs. | `number` | `30` | no |
 | <a name="input_lambda_timeout_seconds"></a> [lambda\_timeout\_seconds](#input\_lambda\_timeout\_seconds) | Controls lambda timeout setting. | `number` | `30` | no |
 | <a name="input_rules"></a> [rules](#input\_rules) | Comma-separated list of rules to track events if just event name is not enough | `string` | `""` | no |

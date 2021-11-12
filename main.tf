@@ -15,6 +15,7 @@ module "lambda" {
     {
       HOOK_URL        = var.default_slack_hook_url
       RULES           = var.rules
+      IGNORE_RULES    = var.ignore_rules
       EVENTS_TO_TRACK = var.events_to_track
       CONFIGURATION   = var.configuration != null ? jsonencode(var.configuration) : ""
     },

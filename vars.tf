@@ -42,6 +42,12 @@ variable "rules" {
   type        = string
 }
 
+variable "ignore_rules" {
+  description = "Comma-separated list of rules to ignore events if you need to suppress something. Will be applied before rules and default_rules"
+  default     = ""
+  type        = string
+}
+
 variable "use_default_rules" {
   description = "Should default rules be used"
   default     = true
