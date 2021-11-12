@@ -1,5 +1,32 @@
 [![FivexL](https://releases.fivexl.io/fivexlbannergit.jpg)](https://fivexl.io/)
 
+<!--- Use Markdown All In One Visual Studio Code extension to refresh TOC -->
+- [Terraform module to deploy lambda that sends notifications about AWS CloudTrail events to Slack](#terraform-module-to-deploy-lambda-that-sends-notifications-about-aws-cloudtrail-events-to-slack)
+  - [Why this module?](#why-this-module)
+  - [Example message](#example-message)
+  - [Delivery delays](#delivery-delays)
+- [Examples](#examples)
+  - [Module deployment with the default ruleset](#module-deployment-with-the-default-ruleset)
+  - [Separating notifications to different Slack channels](#separating-notifications-to-different-slack-channels)
+    - [Module deployment with the default ruleset and different slack channels for different accounts](#module-deployment-with-the-default-ruleset-and-different-slack-channels-for-different-accounts)
+  - [Tracking certain event types](#tracking-certain-event-types)
+  - [User defined rules to match events](#user-defined-rules-to-match-events)
+    - [Module deployment with user-defined rules, list of events to track, and default rule sets](#module-deployment-with-user-defined-rules-list-of-events-to-track-and-default-rule-sets)
+    - [Catch SSM Session events for the "111111111" account](#catch-ssm-session-events-for-the-111111111-account)
+  - [Ignore rules.](#ignore-rules)
+    - [Ignore events from the account "111111111".](#ignore-events-from-the-account-111111111)
+- [About rules and how they are applied](#about-rules-and-how-they-are-applied)
+  - [Default rules](#default-rules)
+  - [Ignore rules](#ignore-rules-1)
+- [Terraform specs](#terraform-specs)
+  - [Requirements](#requirements)
+  - [Providers](#providers)
+  - [Modules](#modules)
+  - [Resources](#resources)
+  - [Inputs](#inputs)
+  - [Outputs](#outputs)
+  - [License](#license)
+
 # Terraform module to deploy lambda that sends notifications about AWS CloudTrail events to Slack
 
 ## Why this module?
@@ -22,9 +49,9 @@ This module allows you to get notifications about:
 The current implementation built upon parsing of S3 notifications, and thus you should expect a 5 to 10 min lag between action and event notification in Slack.
 If you do not get a notification at all - check CloudWatch logs for the lambda to see if there is any issue with provided filters.
 
-## How to
+# Examples
 
-Module deployment with the default ruleset
+## Module deployment with the default ruleset
 
 ```hlc
 # we recomend storing hook url in SSM Parameter store and not commit it to the repo
@@ -50,7 +77,9 @@ resource "aws_s3_bucket" "cloudtrail" {
 }
 ```
 
-Module deployment with the default ruleset and different slack channels for different accounts
+## Separating notifications to different Slack channels
+
+### Module deployment with the default ruleset and different slack channels for different accounts
 
 ```hlc
 # we recomend storing hook url in SSM Parameter store and not commit it to the repo
@@ -96,6 +125,8 @@ resource "aws_s3_bucket" "cloudtrail" {
 }
 ```
 
+## Tracking certain event types
+
 Module deployment with the list of events to track and default rule sets
 
 ```hlc
@@ -134,7 +165,9 @@ resource "aws_s3_bucket" "cloudtrail" {
 }
 ```
 
-Module deployment with user-defined rules, list of events to track, and default rule sets
+## User defined rules to match events
+
+### Module deployment with user-defined rules, list of events to track, and default rule sets
 
 ```hlc
 # we recomend storing hook url in SSM Parameter store and not commit it to the repo
@@ -152,7 +185,7 @@ module "cloudtrail_to_slack" {
 }
 ```
 
-Catch SSM Session events for the "111111111" account
+### Catch SSM Session events for the "111111111" account
 
 ```hcl
 locals {
@@ -175,7 +208,11 @@ module "cloudtrail_to_slack" {
 }
 ```
 
-Ignore events from the account "111111111". Note! We do recomend fixing alerts instead of ignoring them. But if there is no way you can fix it then there is a way to suppress events by providing ignore rules
+## Ignore rules.
+
+### Ignore events from the account "111111111".
+
+Note! We do recomend fixing alerts instead of ignoring them. But if there is no way you can fix it then there is a way to suppress events by providing ignore rules
 
 ```hcl
 locals {
@@ -198,7 +235,7 @@ module "cloudtrail_to_slack" {
 }
 ```
 
-## About rules and how they are applied
+# About rules and how they are applied
 
 This module comes with a set of predefined rules (default rules) that users can take advantage of.
 Rules are python strings that are evaluated in the runtime and should return the bool value.
@@ -258,9 +295,14 @@ default_rules.append('event.get("userIdentity.type", "") == "Root" ' +
                      'and not event["eventName"].startswith(("Get", "List", "Describe", "Head"))')
 ```
 
-## License
+## Ignore rules
 
-Apache 2 Licensed. See LICENSE for full details.
+User can also provide ignore rules. Ignore rules have the same syntax as a default and user defined rules mentioned above.
+But instead of generating message to Slack on match those rules will cause lambda to ignore an event.
+Ignore rules tested before default and user defined rules which means that if even is ignored by ignore rules it will not be
+tested with any other rules.
+
+# Terraform specs
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
@@ -316,3 +358,7 @@ Apache 2 Licensed. See LICENSE for full details.
 |------|-------------|
 | <a name="output_lambda_function_arn"></a> [lambda\_function\_arn](#output\_lambda\_function\_arn) | The ARN of the Lambda Function |
 <!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+
+## License
+
+Apache 2 Licensed. See LICENSE for full details.
