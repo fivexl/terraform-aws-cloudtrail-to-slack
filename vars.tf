@@ -24,6 +24,12 @@ variable "cloudtrail_logs_s3_bucket_name" {
   type        = string
 }
 
+variable "cloudtrail_logs_kms_key_id" {
+  description = "Alias, key id or key arn of the KMS Key that used for CloudTrail events"
+  type        = string
+  default     = ""
+}
+
 variable "events_to_track" {
   description = "Comma-separated list events to track and report"
   default     = ""
