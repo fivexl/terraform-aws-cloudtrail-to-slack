@@ -188,6 +188,7 @@ module "cloudtrail_to_slack" {
 ### Catch SSM Session events for the "111111111" account
 
 ```hcl
+# Important! User defined rules should not contain comas since they are passed to lambda as coma separated string
 locals {
   cloudtrail_rules = [
       "'userIdentity.accountId' in event and event['userIdentity.accountId'] == '11111111111' and event['eventSource'] == 'ssm.amazonaws.com' and event['eventName'].endswith(('Session'))",
@@ -215,6 +216,7 @@ module "cloudtrail_to_slack" {
 Note! We do recomend fixing alerts instead of ignoring them. But if there is no way you can fix it then there is a way to suppress events by providing ignore rules
 
 ```hcl
+# Important! User defined rules should not contain comas since they are passed to lambda as coma separated string
 locals {
   cloudtrail_ignore_rules = [
       "'userIdentity.accountId' in event and event['userIdentity.accountId'] == '11111111111'",
