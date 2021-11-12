@@ -138,16 +138,16 @@ def should_message_be_processed(event, rules, ignore_rules):
     try:
         for rule in ignore_rules:
             if eval(rule, {}, {'event': flat_event}) is True:
-                print('Event matched ignore rule and will not be processed. ' +
-                      f'Rule:\n{rule}\nEvent:\n{flat_event}')
+                print('Event matched ignore rule and will not be processed.\n' +
+                      f'Rule: {rule}\nEvent: {flat_event}')
                 return False  # do not process event
         for rule in rules:
             if eval(rule, {}, {'event': flat_event}) is True:
-                print(f'Event matched rule and will be processed. Rule:\n{rule}\nEvent:\n{flat_event}')
+                print(f'Event matched rule and will be processed.\nRule:{rule}\nEvent: {flat_event}')
                 return True  # do send notification about event
     except Exception:
-        print(f'Event parsing failed: {sys.exc_info()[0]}. '
-              + 'Rule: {rule}\nEvent:\n {event}\nFlat event:\n {flat_event}')
+        print(f'Event parsing failed: {sys.exc_info()[0]}.\n'
+              + f'Rule: {rule}\nEvent: {event}\nFlat event: {flat_event}')
         raise
     print(f'did not match any rules: event {event_name} called by {user}')
     return False
