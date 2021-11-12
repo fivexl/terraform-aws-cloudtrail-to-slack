@@ -138,11 +138,11 @@ def should_message_be_processed(event, rules, ignore_rules):
     try:
         for rule in ignore_rules:
             if eval(rule, {}, {'event': flat_event}) is True:
-                print(f'Event "{flat_event}"" matched ignore rule:\n{rule}')
+                print(f'Event matched ignore rule and will not be processed. Rule:\n{rule}\nEvent:\n{flat_event}')
                 return False # do not process event
         for rule in rules:
             if eval(rule, {}, {'event': flat_event}) is True:
-                print(f'Event "{flat_event}"" matched rule:\n{rule}')
+                print(f'Event matched rule and will be processed. Rule:\n{rule}\nEvent:\n{flat_event}')
                 return True # do send notification about event
     except Exception:
         print(f'Event parsing failed: {sys.exc_info()[0]}. '
@@ -290,7 +290,8 @@ def event_to_slack_message(event, source_file):
 # For local testing
 if __name__ == '__main__':
     hook_url = read_env_variable_or_die('HOOK_URL')
+    ignore_rules = ["'userIdentity.accountId' in event and event['userIdentity.accountId'] == 'YYYYYYYYYYY'"]
     with open('./test/events.json') as f:
         data = json.load(f)
     for event in data:
-        handle_event(event, 'file_name', default_rules, hook_url)
+        handle_event(event, 'file_name', default_rules, ignore_rules, hook_url)
