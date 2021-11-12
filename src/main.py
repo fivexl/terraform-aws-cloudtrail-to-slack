@@ -116,7 +116,7 @@ def lambda_handler(event, context):
     if not rules:
         raise Exception('Have no rules to apply!!! '
                         + 'Check configuration - add some rules or enable default rules')
-    print(f'Going to use the following rules to match events:\n{rules}\nand those two ignore:\n{ignore_rules}')
+    print(f'Match rules:\n{rules}\nIgnore rules:\n{ignore_rules}')
 
     records = get_cloudtrail_log_records(event)
     for record in records:
@@ -138,15 +138,16 @@ def should_message_be_processed(event, rules, ignore_rules):
     try:
         for rule in ignore_rules:
             if eval(rule, {}, {'event': flat_event}) is True:
-                print(f'Event matched ignore rule and will not be processed. Rule:\n{rule}\nEvent:\n{flat_event}')
-                return False # do not process event
+                print('Event matched ignore rule and will not be processed. ' +
+                      f'Rule:\n{rule}\nEvent:\n{flat_event}')
+                return False  # do not process event
         for rule in rules:
             if eval(rule, {}, {'event': flat_event}) is True:
                 print(f'Event matched rule and will be processed. Rule:\n{rule}\nEvent:\n{flat_event}')
-                return True # do send notification about event
+                return True  # do send notification about event
     except Exception:
         print(f'Event parsing failed: {sys.exc_info()[0]}. '
-            + 'Rule: {rule}\nEvent:\n {event}\nFlat event:\n {flat_event}')
+              + 'Rule: {rule}\nEvent:\n {event}\nFlat event:\n {flat_event}')
         raise
     print(f'did not match any rules: event {event_name} called by {user}')
     return False
