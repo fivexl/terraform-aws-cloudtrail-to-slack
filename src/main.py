@@ -98,8 +98,8 @@ def get_hook_url_for_account(event, configuration, default_hook_url):
 def lambda_handler(event, context):
 
     default_hook_url = read_env_variable_or_die('HOOK_URL')
-    user_rules = os.environ.get('RULES', None)
-    ignore_rules = os.environ.get('IGNORE_RULES', "").split(",")
+    user_rules = parse_rules_from_string(os.environ.get('RULES', ''))
+    ignore_rules = parse_rules_from_string(os.environ.get('IGNORE_RULES', ''))
     use_default_rules = os.environ.get('USE_DEFAULT_RULES', None)
     events_to_track = os.environ.get('EVENTS_TO_TRACK', None)
     configuration = os.environ.get('CONFIGURATION', None)
@@ -108,8 +108,7 @@ def lambda_handler(event, context):
     if use_default_rules:
         rules += default_rules
     if user_rules:
-        rules_list = user_rules.split(",")
-        rules += rules_list
+        rules += user_rules
     if events_to_track:
         events_list = events_to_track.replace(" ", "").split(",")
         rules.append(f'"eventName" in event and event["eventName"] in {json.dumps(events_list)}')
@@ -185,6 +184,13 @@ def flatten_json(y):
 
     flatten(y)
     return out
+
+
+# Parse rules from string
+def parse_rules_from_string(rules_as_string):
+    rules_as_list = rules_as_string.split(',')
+    # make sure there are no empty strings in the list
+    return [x for x in rules_as_list if x]
 
 
 # Format message
