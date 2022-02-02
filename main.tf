@@ -72,12 +72,15 @@ data "aws_s3_bucket" "cloudtrail" {
   bucket = var.cloudtrail_logs_s3_bucket_name
 }
 
+data "aws_caller_identity" "current" {}
+
 resource "aws_lambda_permission" "s3" {
-  statement_id  = "AllowExecutionFromS3Bucket"
-  action        = "lambda:InvokeFunction"
-  function_name = module.lambda.lambda_function_name
-  principal     = "s3.amazonaws.com"
-  source_arn    = data.aws_s3_bucket.cloudtrail.arn
+  statement_id   = "AllowExecutionFromS3Bucket"
+  action         = "lambda:InvokeFunction"
+  function_name  = module.lambda.lambda_function_name
+  principal      = "s3.amazonaws.com"
+  source_arn     = data.aws_s3_bucket.cloudtrail.arn
+  source_account = data.aws_caller_identity.current.account_id
 }
 
 resource "aws_s3_bucket_notification" "bucket_notification" {
