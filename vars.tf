@@ -19,15 +19,9 @@ variable "default_slack_hook_url" {
   type        = string
 }
 
-variable "cloudtrail_logs_s3_bucket_name" {
-  description = "Name of the CloudWatch log s3 bucket that contains CloudTrail events"
+variable "cloudtrail_cw_log_group" {
+  description = "Name of the CloudWatch log group that contains CloudTrail events"
   type        = string
-}
-
-variable "cloudtrail_logs_kms_key_id" {
-  description = "Alias, key id or key arn of the KMS Key that used for CloudTrail events"
-  type        = string
-  default     = ""
 }
 
 variable "events_to_track" {
@@ -63,7 +57,7 @@ variable "dead_letter_target_arn" {
 variable "lambda_timeout_seconds" {
   description = "Controls lambda timeout setting."
   type        = number
-  default     = 30
+  default     = 60
 }
 
 variable "lambda_logs_retention_in_days" {
@@ -77,4 +71,3 @@ variable "tags" {
   default     = {}
   type        = map(string)
 }
-

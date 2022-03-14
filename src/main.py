@@ -15,13 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import json
+import base64
 import gzip
-import sys
-import os
 import http.client
-import boto3
-import urllib
+import json
+import os
+import sys
 from datetime import datetime
 
 from rules import default_rules
@@ -53,38 +52,25 @@ def read_env_variable_or_die(env_var_name):
 def get_cloudtrail_log_records(event):
     # Get all the files from S3 so we can process them
     records = []
+    cw_data = event['awslogs']['data']
+    compressed_payload = base64.b64decode(cw_data)
+    uncompressed_payload = gzip.decompress(compressed_payload)
+    payload = json.loads(uncompressed_payload)
 
-    s3 = boto3.client('s3')
-    for record in event['Records']:
-        # In case if we get something unexpected
-        if 's3' not in record:
-            raise AssertionError(f'recieved record does not contain s3 section: {record}')
-        bucket = record['s3']['bucket']['name']
-        key = urllib.parse.unquote_plus(record['s3']['object']['key'], encoding='utf-8')
-        # Do not process digest files
-        if 'Digest' in key:
-            continue
-        try:
-            response = s3.get_object(Bucket=bucket, Key=key)
-            with gzip.GzipFile(fileobj=response["Body"]) as gzipfile:
-                content = gzipfile.read()
-            content_as_json = json.loads(content.decode('utf8'))
-            records.append(
-                {
-                    'key': key,
-                    'events': content_as_json['Records'],
-                    'eventName': record['eventName']
-                }
-            )
-        except Exception as e:
-            print(e)
-            print(f'Error getting object {key} from bucket {bucket}')
-            raise e
+    log_events = payload['logEvents']
+    for log_event in log_events:
+        records.append(
+            {
+                'key': payload['logGroup'],
+                'accountId': payload['owner'],
+                'event': json.loads(log_event['message']),
+            }
+        )
     return records
 
 
 def get_account_id_from_event(event):
-    return event['userIdentity']['accountId'] if 'accountId' in event['userIdentity'] else ''
+    return event['recipientAccountId'] if 'recipientAccountId' in event else ''
 
 
 def get_hook_url_for_account(event, configuration, default_hook_url):
@@ -104,6 +90,7 @@ def lambda_handler(event, context):
     events_to_track = os.environ.get('EVENTS_TO_TRACK', None)
     configuration = os.environ.get('CONFIGURATION', None)
     configuration_as_json = json.loads(configuration) if configuration else []
+
     rules = []
     if use_default_rules:
         rules += default_rules
@@ -119,12 +106,8 @@ def lambda_handler(event, context):
 
     records = get_cloudtrail_log_records(event)
     for record in records:
-        if 's3:ObjectRemoved' in record['eventName']:
-            # TODO: Handle deletion
-            continue
-        for log_event in record['events']:
-            hook_url = get_hook_url_for_account(log_event, configuration_as_json, default_hook_url)
-            handle_event(log_event, record['key'], rules, ignore_rules, hook_url)
+        hook_url = get_hook_url_for_account(record, configuration_as_json, default_hook_url)
+        handle_event(record['event'], record['key'], rules, ignore_rules, hook_url)
 
     return 200
 
@@ -132,6 +115,7 @@ def lambda_handler(event, context):
 # Filter out events
 def should_message_be_processed(event, rules, ignore_rules):
     flat_event = flatten_json(event)
+    flat_event = {k: v for k, v in flat_event.items() if v is not None}
     user = event['userIdentity']
     event_name = event['eventName']
     try:
@@ -300,5 +284,4 @@ if __name__ == '__main__':
     ignore_rules = ["'userIdentity.accountId' in event and event['userIdentity.accountId'] == 'YYYYYYYYYYY'"]
     with open('./test/events.json') as f:
         data = json.load(f)
-    for event in data:
-        handle_event(event, 'file_name', default_rules, ignore_rules, hook_url)
+    lambda_handler(data, {})
