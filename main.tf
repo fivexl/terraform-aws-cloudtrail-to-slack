@@ -1,6 +1,6 @@
 module "lambda" {
   source  = "terraform-aws-modules/lambda/aws"
-  version = "2.25.0"
+  version = "3.1.1"
 
   function_name = var.function_name
   description   = "Send CloudTrail Events to Slack"
