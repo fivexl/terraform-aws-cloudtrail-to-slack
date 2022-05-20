@@ -78,3 +78,8 @@ variable "tags" {
   type        = map(string)
 }
 
+variable "filter_prefix" {
+  description = "Filter prefix on s3 bucket"
+  type        = string
+  default     = "AWSLogs/"
+}
