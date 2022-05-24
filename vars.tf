@@ -60,6 +60,12 @@ variable "dead_letter_target_arn" {
   default     = null
 }
 
+variable "lambda_memory_size" {
+  description = "Controls lambda memory setting."
+  type        = number
+  default     = 512
+}
+
 variable "lambda_timeout_seconds" {
   description = "Controls lambda timeout setting."
   type        = number

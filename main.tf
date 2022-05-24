@@ -30,6 +30,7 @@ module "lambda" {
   dead_letter_target_arn    = var.dead_letter_target_arn
   attach_dead_letter_policy = var.dead_letter_target_arn != null ? true : false
 
+  memory_size = var.lambda_memory_size
   tags = var.tags
 }
 
