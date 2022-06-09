@@ -51,7 +51,7 @@ check-git-clean:
 
 .PHONY: check-git-branch
 check-git-branch: check-git-clean
-	git fetch --all --tags --prune
+	git fetch origin --tags --prune
 	git checkout master
 
 release: check-git-branch bump documentation
