@@ -29,7 +29,7 @@ from rules import default_rules
 # Slack web hook example
 # https://hooks.slack.com/services/XXXXXXX/XXXXXXX/XXXXXXXXXX
 def post_slack_message(hook_url, message):
-    print(f'Sending message: {json.dumps(message)}')
+    # print(f'Sending message: {json.dumps(message)}')
     headers = {'Content-type': 'application/json'}
     connection = http.client.HTTPSConnection('hooks.slack.com')
     connection.request('POST',
@@ -37,7 +37,7 @@ def post_slack_message(hook_url, message):
                        json.dumps(message),
                        headers)
     response = connection.getresponse()
-    print('Response: {}, message: {}'.format(response.status, response.read().decode()))
+    # print('Response: {}, message: {}'.format(response.status, response.read().decode()))
     return response.status
 
 
@@ -102,7 +102,7 @@ def lambda_handler(event, context):
     if not rules:
         raise Exception('Have no rules to apply!!! '
                         + 'Check configuration - add some rules or enable default rules')
-    print(f'Match rules:\n{rules}\nIgnore rules:\n{ignore_rules}')
+    # print(f'Match rules:\n{rules}\nIgnore rules:\n{ignore_rules}')
 
     records = get_cloudtrail_log_records(event)
     for record in records:
@@ -126,13 +126,13 @@ def should_message_be_processed(event, rules, ignore_rules):
                 return False  # do not process event
         for rule in rules:
             if eval(rule, {}, {'event': flat_event}) is True:
-                print(f'Event matched rule and will be processed.\nRule:{rule}\nEvent: {flat_event}')
+                # print(f'Event matched rule and will be processed.\nRule:{rule}\nEvent: {flat_event}')
                 return True  # do send notification about event
     except Exception:
         print(f'Event parsing failed: {sys.exc_info()[0]}.\n'
               + f'Rule: {rule}\nEvent: {event}\nFlat event: {flat_event}')
         raise
-    print(f'did not match any rules: event {event_name} called by {user}')
+    # print(f'did not match any rules: event {event_name} called by {user}')
     return False
 
 
