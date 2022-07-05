@@ -208,6 +208,22 @@ module "cloudtrail_to_slack" {
   rules                          = join(",", local.cloudtrail_rules)
 }
 ```
+### Using a custom separator for complex rules containing commas
+
+```hcl
+locals {
+  cloudtrail_rules = [
+      ...
+    ]
+  custom_separator = "%"
+}
+
+module "cloudtrail_to_slack" {
+      ...
+  rules           = join(local.custom_separator, local.cloudtrail_rules)
+  rules_separator = local.custom_separator
+}
+```
 
 ## Ignore rules.
 
@@ -354,6 +370,7 @@ tested with any other rules.
 | <a name="input_rules"></a> [rules](#input\_rules) | Comma-separated list of rules to track events if just event name is not enough | `string` | `""` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags to attach to resources | `map(string)` | `{}` | no |
 | <a name="input_use_default_rules"></a> [use\_default\_rules](#input\_use\_default\_rules) | Should default rules be used | `bool` | `true` | no |
+| <a name="input_rules_separator"></a> [rules\_separator](#input\rules\_separator) | Custom rules separator. Must be defined if there are commas in the rules | `string` | `","` | no |
 
 ## Outputs
 
