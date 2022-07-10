@@ -19,6 +19,7 @@ module "lambda" {
       IGNORE_RULES    = var.ignore_rules
       EVENTS_TO_TRACK = var.events_to_track
       CONFIGURATION   = var.configuration != null ? jsonencode(var.configuration) : ""
+      SHORT_MESSAGES  = var.short_messages
     },
     var.use_default_rules ? { USE_DEFAULT_RULES = "True" } : {}
   )

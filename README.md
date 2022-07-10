@@ -371,6 +371,7 @@ tested with any other rules.
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags to attach to resources | `map(string)` | `{}` | no |
 | <a name="input_use_default_rules"></a> [use\_default\_rules](#input\_use\_default\_rules) | Should default rules be used | `bool` | `true` | no |
 | <a name="input_rules_separator"></a> [rules\_separator](#input\rules\_separator) | Custom rules separator. Must be defined if there are commas in the rules | `string` | `","` | no |
+| <a name="input_short_messages"></a> [short\_messages](#input\short\_messages) | Set to "True" if you are willing to get short messages containing links to events in AWS Console | `string` | `"False"` | no |
 
 ## Outputs
 

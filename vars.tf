@@ -84,3 +84,8 @@ variable "rules_separator" {
   type        = string
 }
 
+variable "short_messages" {
+  description = "Set to 'True' if you are willing to get short messages containing links to events in AWS Console"
+  default     = "False"
+  type        = string
+}
