@@ -89,3 +89,9 @@ variable "short_messages" {
   default     = "False"
   type        = string
 }
+
+variable "cloudtrail_home_region" {
+  description = "Region in which the trail was created. Value must to be defined if short_messages is 'True'"
+  default     = ""
+  type        = string
+}

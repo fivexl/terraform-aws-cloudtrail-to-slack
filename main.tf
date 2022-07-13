@@ -13,13 +13,14 @@ module "lambda" {
 
   environment_variables = merge(
     {
-      HOOK_URL        = var.default_slack_hook_url
-      RULES_SEPARATOR = var.rules_separator
-      RULES           = var.rules
-      IGNORE_RULES    = var.ignore_rules
-      EVENTS_TO_TRACK = var.events_to_track
-      CONFIGURATION   = var.configuration != null ? jsonencode(var.configuration) : ""
-      SHORT_MESSAGES  = var.short_messages
+      HOOK_URL          = var.default_slack_hook_url
+      RULES_SEPARATOR   = var.rules_separator
+      RULES             = var.rules
+      IGNORE_RULES      = var.ignore_rules
+      EVENTS_TO_TRACK   = var.events_to_track
+      CONFIGURATION     = var.configuration != null ? jsonencode(var.configuration) : ""
+      SHORT_MESSAGES    = var.short_messages
+      CLOUDTRAIL_REGION = var.cloudtrail_home_region
     },
     var.use_default_rules ? { USE_DEFAULT_RULES = "True" } : {}
   )

@@ -96,7 +96,6 @@ def get_hook_url_for_account(event, configuration, default_hook_url):
 
 
 def lambda_handler(event, context):
-
     default_hook_url = read_env_variable_or_die('HOOK_URL')
     rules_separator = os.environ.get('RULES_SEPARATOR', ',')
     user_rules = parse_rules_from_string(os.environ.get('RULES', ''), rules_separator)
@@ -105,6 +104,7 @@ def lambda_handler(event, context):
     events_to_track = os.environ.get('EVENTS_TO_TRACK', None)
     configuration = os.environ.get('CONFIGURATION', None)
     short_messages = (os.environ.get('SHORT_MESSAGES', 'False') == 'True')
+    cloudtrail_region = os.environ.get('CLOUDTRAIL_REGION', '')
     configuration_as_json = json.loads(configuration) if configuration else []
     rules = []
     if use_default_rules:
@@ -126,7 +126,7 @@ def lambda_handler(event, context):
             continue
         for log_event in record['events']:
             hook_url = get_hook_url_for_account(log_event, configuration_as_json, default_hook_url)
-            handle_event(log_event, record['key'], rules, ignore_rules, hook_url, short_messages)
+            handle_event(log_event, record['key'], rules, ignore_rules, hook_url, short_messages, cloudtrail_region)
 
     return 200
 
@@ -155,14 +155,14 @@ def should_message_be_processed(event, rules, ignore_rules):
 
 
 # Handle events
-def handle_event(event, source_file, rules, ignore_rules, hook_url, short_messages):
+def handle_event(event, source_file, rules, ignore_rules, hook_url, short_messages, cloudtrail_region):
     if should_message_be_processed(event, rules, ignore_rules) is not True:
         return
     # log full event if it is AccessDenied
     if ('errorCode' in event and 'AccessDenied' in event['errorCode']):
         event_as_string = json.dumps(event, indent=4)
         print(f'errorCode == AccessDenied; log full event: {event_as_string}')
-    message = event_to_slack_message(event, source_file, short_messages)
+    message = event_to_slack_message(event, source_file, short_messages, cloudtrail_region)
     response = post_slack_message(hook_url, message)
     if response != 200:
         raise Exception('Failed to send message to Slack!')
@@ -196,8 +196,7 @@ def parse_rules_from_string(rules_as_string, rules_separator):
 
 
 # Format message
-def event_to_slack_message(event, source_file, short_messages):
-
+def event_to_slack_message(event, source_file, short_messages, cloudtrail_region):
     event_name = event['eventName']
     error_code = event['errorCode'] if 'errorCode' in event else None
     error_message = event['errorMessage'] if 'errorMessage' in event else None
@@ -250,25 +249,25 @@ def event_to_slack_message(event, source_file, short_messages):
 
     if short_messages:
         blocks.append({
-                'type': 'section',
+            'type': 'section',
+            'text': {
+                'type': 'mrkdwn',
+                'text': 'Follow the link to AWS Console to get more details.'
+            },
+            'accessory': {
+                'type': 'button',
                 'text': {
-                    'type': 'mrkdwn',
-                    'text': 'Follow the link to AWS Console to get more details.'
+                    'type': 'plain_text',
+                    'text': 'AWS Console',
                 },
-                'accessory': {
-                    'type': 'button',
-                    'text': {
-                        'type': 'plain_text',
-                        'text': 'AWS Console',
-                    },
-                    'value': 'aws_console',
-                    'url': f'https://{event["awsRegion"]}.console.aws.amazon.com/cloudtrail/home?region={event["awsRegion"]}#/events/{event["eventID"]}',
-                    'action_id': 'button-action'
-                }
-            })
+                'value': 'aws_console',
+                'url': f'https://{cloudtrail_region}.console.aws.amazon.com/cloudtrail/home?region={cloudtrail_region}#/events/{event["eventID"]}',
+                'action_id': 'button-action'
+            }
+        })
     else:
         for key in event_elements:
-            if  event[key] and event[key] is not None:
+            if event[key] and event[key] is not None:
                 contexts.append({
                     'type': 'mrkdwn',
                     'text': f'*{key}:* ```{json.dumps(event[key], indent=4)}```'
@@ -313,4 +312,4 @@ if __name__ == '__main__':
     with open('./test/events.json') as f:
         data = json.load(f)
     for event in data:
-        handle_event(event, 'file_name', default_rules, ignore_rules, hook_url, True)
+        handle_event(event, 'file_name', default_rules, ignore_rules, hook_url, False, None)
