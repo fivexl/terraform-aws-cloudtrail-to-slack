@@ -67,7 +67,7 @@ release: check-git-branch bump documentation
     		-X POST 																\
     		-H "Accept: application/vnd.github.v3+json"								\
     		https://api.github.com/repos/stroeer/terraform-aws-cloudtrail-to-slack/releases \
-    		-d "{\"tag_name\":\"3.0.1\",\"generate_release_notes\":true}"; 									\
+    		-d "{\"tag_name\":\"$(NEXT_TAG)\",\"generate_release_notes\":true}"; 									\
 	fi;
 
 help: ## Display this help screen
