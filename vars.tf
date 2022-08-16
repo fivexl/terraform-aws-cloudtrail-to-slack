@@ -71,3 +71,9 @@ variable "tags" {
   default     = {}
   type        = map(string)
 }
+
+variable "rules_separator" {
+  description = "Custom rules separator. Can be used if there are commas in the rules"
+  default     = ","
+  type        = string
+}
