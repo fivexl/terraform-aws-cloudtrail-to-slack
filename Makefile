@@ -56,7 +56,7 @@ check-git-branch: check-git-clean
 
 release: check-git-branch bump documentation
 	git add README.md docs/part1.md
-	git commit -vsam "Bump version to $(NEXT_TAG)"
+	git commit -vsam "Bump version to $(NEXT_TAG)" || true
 	git tag -a $(NEXT_TAG) -m "$(NEXT_TAG)"
 	git push origin $(NEXT_TAG)
 	git push
