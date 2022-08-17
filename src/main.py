@@ -70,12 +70,12 @@ def get_cloudtrail_log_records(event):
 
 
 def get_account_id_from_event(event):
-    return event['recipientAccountId'] if 'recipientAccountId' in event else ''
+    return event.get("recipientAccountId", "-no-recipientAccountId-")
 
 
 def get_hook_url_for_account(event, configuration, default_hook_url):
-    accoun_id = get_account_id_from_event(event)
-    hook_url = [cfg['slack_hook_url'] for cfg in configuration if accoun_id in cfg['accounts']]
+    account_id = get_account_id_from_event(event)
+    hook_url = [cfg['slack_hook_url'] for cfg in configuration if account_id in cfg['accounts']]
     if len(hook_url) > 0:
         return hook_url[0]
     return default_hook_url
@@ -107,7 +107,7 @@ def lambda_handler(event, context):
 
     records = get_cloudtrail_log_records(event)
     for record in records:
-        hook_url = get_hook_url_for_account(record, configuration_as_json, default_hook_url)
+        hook_url = get_hook_url_for_account(record['event'], configuration_as_json, default_hook_url)
         handle_event(record['event'], record['key'], rules, ignore_rules, hook_url)
 
     return 200
@@ -122,16 +122,16 @@ def should_message_be_processed(event, rules, ignore_rules):
     try:
         for rule in ignore_rules:
             if eval(rule, {}, {'event': flat_event}) is True:
-                print('Event matched ignore rule and will not be processed.\n' +
-                      f'Rule: {rule}\nEvent: {flat_event}')
+                print('Event matched ignore rule and will not be processed. ' +
+                      f'Rule: {rule} Event: {flat_event}')
                 return False  # do not process event
         for rule in rules:
             if eval(rule, {}, {'event': flat_event}) is True:
                 # print(f'Event matched rule and will be processed.\nRule:{rule}\nEvent: {flat_event}')
                 return True  # do send notification about event
     except Exception:
-        print(f'Event parsing failed: {sys.exc_info()[0]}.\n'
-              + f'Rule: {rule}\nEvent: {event}\nFlat event: {flat_event}')
+        print(f'Event parsing failed: {sys.exc_info()[0]}. '
+              + f'Rule: {rule} Event: {event} Flat event: {flat_event}')
         raise
     # print(f'did not match any rules: event {event_name} called by {user}')
     return False
@@ -190,7 +190,6 @@ def event_to_slack_message(event, source_file):
     event_time = datetime.strptime(event['eventTime'], '%Y-%m-%dT%H:%M:%SZ')
     event_id = event['eventID']
     region = event.get("awsRegion", "-no-region-")
-    recipientAccountId = event.get("recipientAccountId", "-no-recipientAccountId-")
     actor = event['userIdentity']['arn'] if 'arn' in event['userIdentity'] else event['userIdentity']
     account_id = get_account_id_from_event(event)
     title = f'*{actor}* called *{event_name}*'
@@ -267,11 +266,6 @@ def event_to_slack_message(event, source_file):
     contexts.append({
         'type': 'mrkdwn',
         'text': f'awsRegion: {region}'
-    })
-
-    contexts.append({
-        'type': 'mrkdwn',
-        'text': f'recipientAccountId: {recipientAccountId}'
     })
 
     contexts.append({
