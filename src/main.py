@@ -189,6 +189,8 @@ def event_to_slack_message(event, source_file):
     additional_details = event['additionalEventData'] if 'additionalEventData' in event else None
     event_time = datetime.strptime(event['eventTime'], '%Y-%m-%dT%H:%M:%SZ')
     event_id = event['eventID']
+    region = event.get("awsRegion", "-no-region-")
+    recipientAccountId = event.get("recipientAccountId", "-no-recipientAccountId-")
     actor = event['userIdentity']['arn'] if 'arn' in event['userIdentity'] else event['userIdentity']
     account_id = get_account_id_from_event(event)
     title = f'*{actor}* called *{event_name}*'
@@ -260,6 +262,16 @@ def event_to_slack_message(event, source_file):
     contexts.append({
         'type': 'mrkdwn',
         'text': f'Account Id: {account_id}'
+    })
+
+    contexts.append({
+        'type': 'mrkdwn',
+        'text': f'awsRegion: {region}'
+    })
+
+    contexts.append({
+        'type': 'mrkdwn',
+        'text': f'recipientAccountId: {recipientAccountId}'
     })
 
     contexts.append({
