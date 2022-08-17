@@ -31,4 +31,4 @@ default_rules.append('event.get("errorCode", "") == "AccessDenied" ' +
 # Notify about all non-read actions done by root
 default_rules.append('event.get("userIdentity.type", "") == "Root" ' +
                      'and not event["eventName"].startswith(("Get", "List", "Describe", "Head"))')
-default_rules.append('event["eventName"] == "AttachUserPolicy" and event.get("requestParameters.policyArn", "") == "AdministratorAccess"')
+default_rules.append('event["eventName"] == "AttachUserPolicy" and "AdministratorAccess" in event.get("requestParameters.policyArn", "")')
