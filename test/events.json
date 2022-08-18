@@ -1,5 +1,42 @@
 {
-    "awslogs": {
-        "data": "H4sIACBbL2IC/51UXW/bOBD8K4KeI4kUZUnW06lOUviaXIrYaIHWhUCLtMueJPpIKrYb+L/fUvRHmqKHQwVbNneHs9zhkM9+y7Wmaz7fb7hf+NflvKzub2az8u2Nf+XLbccVhMdJjBKcxJiQDMKNXL9Vst9Ahm51UMvOKNkYueUqmjSyZ3NFRXMn19qBZ0Zx2r7iqS7IivfBlmsT4IrADN0vda3ExgjZ3YrGcKX94rO/kjJYUuV/GThvnnhnbPzZFwyoSZqREUEIj5I8QyMUj8Yp1MEpInmSklGWZ+k4TcZxSkg+5JMEMgjqGQEiGNpCPzhNsjjNcoLwmFydxAH654XPbcUPsBhY1sIvFj4OUb7wrxZ+r7maMsgKs4cMYA3IOWBKrfuWs0fZ8AG6UaKrxYY2Uzbkd/AU9vWHfYXMoahyFeC3AIULbXThFd4Apo4xAMV5VH6cPXKo/sTZbPZQwbBkreiENooaqcq6hg6ql7JHu3O1XQhfV6+uZd+Z45pewk9poHnH978CaEiDKhMwAt8ZJ8ExNoXlcvVKlV/K8XPpV0oI2lolXuKKQQlrRHWUItJahrSl32UH4bCWbXR22G9I9n8kshb4i7bHTf+NEgcg2fLllN1yxgEG0l1TQ61wNkWNUWLZG66dlDWcqCPG1YxRHAeIBDiZo7zw4rTwSPxpWFu7omVvvlp/1gB3Haxoo2Hm4WDZB2vPRfsTFU6ACgNV7qgG4Ez2qnbQhrZLRn/U+gI8C3IHrd/2XW1XrGM4o4gQ7GTd6ke+Pp2oXrtdip2rhjrT9yVjsLN6QCAUnj5n3cs11HIuARMI8KDqaBMRzw41+zv4Rp9ohEMchzhD3p3o+l00ChMYpQFGJCRJBi1872KYG+7ytEoT72HDuz+v38Hf4I0w1czupqo+3EfxKCSgzxKl3pE3D1EFIQ9aZlJFD4rWDa8mUm2k20ivXq0jxY3aB61kPILLpmNUsaEDxf/poef3VIFa9q5zG9zS3dTw1o5G6DDg9AbU4zcNb+3VB4mub5oLw/T6qJB7gmyc4yAZ42UwTqGLU/yyPT9OCHI8WgI+Wzlo8AIOZmMPXWMvN6N6fnbM+Zbb6nIjJrRpnOFoB7emXeVwS19mKQ6HXUCo/O/TNLBPwKtrqfYD5P5MCZ71D18O/wKIqp15ugYAAA=="
-    }
+    "eventVersion": "1.08",
+    "userIdentity": {
+        "type": "AssumedRole",
+        "principalId": "xxxx:xxxx@xxxx.de",
+        "arn": "arn:aws:sts: : xxxx:assumed-role/AWSReservedSSO_AWSAdministratorAccess_942041421337/xxxxx@xxxxx.xxx",
+        "accountId": "942041421337",
+        "accessKeyId": "942041421337",
+        "sessionContext": {
+            "sessionIssuer": {
+                "type": "Role",
+                "principalId": "942041421337",
+                "arn": "arn:aws:iam: : 942041421337:role/aws-reserved/sso.amazonaws.com/eu-west-1/AWSReservedSSO_AWSAdministratorAccess_942041421337",
+                "accountId": "942041421337",
+                "userName": "AWSReservedSSO_AWSAdministratorAccess_942041421337"
+            },
+            "webIdFederationData": {},
+            "attributes": {
+                "creationDate": "2022-03-14T08: 26: 32Z",
+                "mfaAuthenticated": "false"
+            }
+        }
+    },
+    "errorCode": "AccessDenied",
+    "eventTime": "2022-03-14T14:21:38Z",
+    "eventSource": "lambda.amazonaws.com",
+    "eventName": "CreateUser",
+    "awsRegion": "us-west-2",
+    "sourceIPAddress": "00.00.00.00",
+    "userAgent": "aws-internal/3 aws-sdk-java/1.12.170 Linux/5.4.176-103.347.amzn2int.x86_64 OpenJDK_64-Bit_Server_VM/25.322-b06 java/1.8.0_322 vendor/Oracle_Corporation cfg/retry-mode/standard",
+    "requestParameters": {
+        "maxItems": 50
+    },
+    "responseElements": null,
+    "requestID": "00000000-7981-491b-9664-00000000",
+    "eventID": "0000000-815b-497f-00000-000000",
+    "readOnly": true,
+    "eventType": "AwsApiCall",
+    "managementEvent": true,
+    "recipientAccountId": "942041421337",
+    "eventCategory": "Management"
 }

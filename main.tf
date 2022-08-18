@@ -1,3 +1,6 @@
+locals {
+  placeholder = "ACCOUNT_ID"
+}
 module "lambda" {
   source  = "registry.terraform.io/terraform-aws-modules/lambda/aws"
   version = "3.2.0"
@@ -5,20 +8,23 @@ module "lambda" {
   function_name = var.function_name
   description   = "Send CloudTrail Events to Slack"
   handler       = "main.lambda_handler"
-  runtime       = "python3.8"
+  runtime       = "python3.9"
   timeout       = var.lambda_timeout_seconds
+  architectures = ["arm64"]
   publish       = true
 
   source_path = "${path.module}/src/"
 
   environment_variables = merge(
     {
-      HOOK_URL        = var.default_slack_hook_url
-      RULES_SEPARATOR = var.rules_separator
-      RULES           = var.rules
-      IGNORE_RULES    = var.ignore_rules
-      EVENTS_TO_TRACK = var.events_to_track
-      CONFIGURATION   = var.configuration != null ? jsonencode(var.configuration) : ""
+      HOOK_URL                = var.default_slack_hook_url
+      RULES_SEPARATOR         = var.rules_separator
+      RULES                   = var.rules
+      IGNORE_RULES            = var.ignore_rules
+      EVENTS_TO_TRACK         = var.events_to_track
+      CONFIGURATION           = var.configuration != null ? jsonencode(var.configuration) : ""
+      SNS_PATTERN             = var.sns_topic_pattern
+      SNS_PATTERN_PLACEHOLDER = local.placeholder
     },
     var.use_default_rules ? { USE_DEFAULT_RULES = "True" } : {}
   )
@@ -45,4 +51,21 @@ resource "aws_cloudwatch_log_subscription_filter" "cloudwatch_logs_to_slack" {
   log_group_name  = data.aws_cloudwatch_log_group.logs.name
   filter_pattern  = ""
   destination_arn = module.lambda.lambda_function_arn
+}
+
+
+resource "aws_iam_role_policy_attachment" "sns" {
+  policy_arn = aws_iam_policy.sns.arn
+  role       = module.lambda.lambda_role_name
+}
+
+resource "aws_iam_policy" "sns" {
+  policy = data.aws_iam_policy_document.sns.json
+}
+
+data "aws_iam_policy_document" "sns" {
+  statement {
+    actions   = ["sns:Publish"]
+    resources = [replace(var.sns_topic_pattern, "ACCOUNT_ID", "*")]
+  }
 }

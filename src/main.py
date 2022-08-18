@@ -21,10 +21,13 @@ import http.client
 import json
 import os
 import sys
+import boto3
 from datetime import datetime
 
 from rules import default_rules
 
+
+sns = boto3.client('sns')
 
 # Slack web hook example
 # https://hooks.slack.com/services/XXXXXXX/XXXXXXX/XXXXXXXXXX
@@ -40,14 +43,17 @@ def post_slack_message(hook_url, message):
     # print('Response: {}, message: {}'.format(response.status, response.read().decode()))
     return response.status
 
-
-def read_env_variable_or_die(env_var_name):
-    value = os.environ.get(env_var_name, '')
-    if value == '':
-        message = f'Required env variable {env_var_name} is not defined or set to empty string'
-        raise EnvironmentError(message)
-    return value
-
+def publish_sns(sns_topic, event):
+    try:
+        return sns.publish(
+            TargetArn=sns_topic,
+            Message=json.dumps(event),
+        )['ResponseMetadata']['HTTPStatusCode']
+    except Exception as e:
+        print(f"Topic {sns_topic}: {e}")
+        if "NotFound" in str(e) or "AuthorizationError" in str(e):
+            return 200
+        return 500
 
 def get_cloudtrail_log_records(event):
     # Get all the files from S3 so we can process them
@@ -81,15 +87,21 @@ def get_hook_url_for_account(event, configuration, default_hook_url):
     return default_hook_url
 
 
+def get_sns_topic_for_account(event, sns_pattern, placeholder):
+    account_id = get_account_id_from_event(event)
+    return sns_pattern.replace(placeholder, account_id)
+
 def lambda_handler(event, context):
 
-    default_hook_url = read_env_variable_or_die('HOOK_URL')
+    default_hook_url = os.environ.get('HOOK_URL', None)
     rules_separator = os.environ.get('RULES_SEPARATOR', ',')
     user_rules = parse_rules_from_string(os.environ.get('RULES', ''), rules_separator)
     ignore_rules = parse_rules_from_string(os.environ.get('IGNORE_RULES', ''), rules_separator)
     use_default_rules = os.environ.get('USE_DEFAULT_RULES', None)
     events_to_track = os.environ.get('EVENTS_TO_TRACK', None)
     configuration = os.environ.get('CONFIGURATION', None)
+    sns_pattern = os.environ.get('SNS_PATTERN', '')
+    placeholder = os.environ.get('SNS_PATTERN_PLACEHOLDER', '')
     configuration_as_json = json.loads(configuration) if configuration else []
 
     rules = []
@@ -108,7 +120,8 @@ def lambda_handler(event, context):
     records = get_cloudtrail_log_records(event)
     for record in records:
         hook_url = get_hook_url_for_account(record['event'], configuration_as_json, default_hook_url)
-        handle_event(record['event'], record['key'], rules, ignore_rules, hook_url)
+        sns_topic = get_sns_topic_for_account(record['event'], sns_pattern, placeholder)
+        handle_event(record['event'], record['key'], rules, ignore_rules, hook_url, sns_topic)
 
     return 200
 
@@ -117,8 +130,6 @@ def lambda_handler(event, context):
 def should_message_be_processed(event, rules, ignore_rules):
     flat_event = flatten_json(event)
     flat_event = {k: v for k, v in flat_event.items() if v is not None}
-    user = event['userIdentity']
-    event_name = event['eventName']
     try:
         for rule in ignore_rules:
             if eval(rule, {}, {'event': flat_event}) is True:
@@ -138,17 +149,24 @@ def should_message_be_processed(event, rules, ignore_rules):
 
 
 # Handle events
-def handle_event(event, source_file, rules, ignore_rules, hook_url):
+def handle_event(event, source_file, rules, ignore_rules, hook_url, sns_topic):
     if should_message_be_processed(event, rules, ignore_rules) is not True:
         return
     # log full event if it is AccessDenied
     if ('errorCode' in event and 'AccessDenied' in event['errorCode']):
-        event_as_string = json.dumps(event, indent=4)
+        event_as_string = json.dumps(event)
         print(f'errorCode == AccessDenied; log full event: {event_as_string}')
-    message = event_to_slack_message(event, source_file)
-    response = post_slack_message(hook_url, message)
-    if response != 200:
-        raise Exception('Failed to send message to Slack!')
+    sns_response = publish_sns(sns_topic, event)
+    if sns_response != 200:
+        raise Exception('Failed to send message to SNS!')
+
+    if hook_url:
+        message = event_to_slack_message(event, source_file)
+        slack_response = post_slack_message(hook_url, message)
+        if slack_response != 200:
+            raise Exception('Failed to send message to Slack!')
+    else:
+        print(f"No hook url found for account {get_account_id_from_event(event)}")
 
 
 # Flatten json
@@ -287,8 +305,28 @@ def event_to_slack_message(event, source_file):
 
 # For local testing
 if __name__ == '__main__':
-    hook_url = read_env_variable_or_die('HOOK_URL')
+    os.environ["SNS_PATTERN_PLACEHOLDER"] = "ACCOUNT_ID"
+    os.environ["SNS_PATTERN"] = "arn:aws:sns:eu-west-1:ACCOUNT_ID:cloudtrail-notifications"
+    os.environ["USE_DEFAULT_RULES"] = "true"
     ignore_rules = ["'userIdentity.accountId' in event and event['userIdentity.accountId'] == 'YYYYYYYYYYY'"]
     with open('./test/events.json') as f:
-        data = json.load(f)
+        json_string = json.dumps({
+            "messageType": "DATA_MESSAGE",
+            "owner": "942041421337",
+            "logGroup": "aws-controltower/CloudTrailLogs",
+            "logStream": "942041421337_CloudTrail_eu-west-1_3",
+            "subscriptionFilters": [ "foo-bar"],
+            "logEvents": [{
+                "id": "36735300154870502596213160384635787696492633805025443840",
+                "timestamp": 1647267830193,
+                "message": json.dumps(json.load(f))
+            }]}
+        )
+        compressed_payload = gzip.compress(bytes(json_string, 'utf-8'))
+        encoded_payload = base64.b64encode(compressed_payload)
+        data = {
+            "awslogs": {
+                "data": encoded_payload
+            }
+        }
     lambda_handler(data, {})
