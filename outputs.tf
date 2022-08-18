@@ -4,6 +4,6 @@ output "lambda_function_arn" {
 }
 
 output "placeholder" {
-  value = local.placeholder
+  value       = local.placeholder
   description = "Placeholder to be used in var.sns_pattern."
 }

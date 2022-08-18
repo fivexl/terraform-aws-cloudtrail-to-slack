@@ -55,14 +55,6 @@ def publish_sns(sns_topic, event):
             return 200
         return 500
 
-def read_env_variable_or_die(env_var_name):
-    value = os.environ.get(env_var_name, '')
-    if value == '':
-        message = f'Required env variable {env_var_name} is not defined or set to empty string'
-        raise EnvironmentError(message)
-    return value
-
-
 def get_cloudtrail_log_records(event):
     # Get all the files from S3 so we can process them
     records = []
@@ -313,7 +305,9 @@ def event_to_slack_message(event, source_file):
 
 # For local testing
 if __name__ == '__main__':
-    hook_url = read_env_variable_or_die('HOOK_URL')
+    os.environ["SNS_PATTERN_PLACEHOLDER"] = "ACCOUNT_ID"
+    os.environ["SNS_PATTERN"] = "arn:aws:sns:eu-west-1:ACCOUNT_ID:cloudtrail-notifications"
+    os.environ["USE_DEFAULT_RULES"] = "true"
     ignore_rules = ["'userIdentity.accountId' in event and event['userIdentity.accountId'] == 'YYYYYYYYYYY'"]
     with open('./test/events.json') as f:
         json_string = json.dumps({
