@@ -19,7 +19,7 @@ NEXT_VERSION		:= $(shell echo $(MAJOR).$$(($(MINOR)+1)).0)
 else
 NEXT_VERSION		:= $(shell echo $(MAJOR).$(MINOR).$$(($(PATCH)+1)))
 endif
-NEXT_TAG 			:= v$(NEXT_VERSION)
+NEXT_TAG 			:= stroeer-v$(NEXT_VERSION)
 
 all: fmt validate
 
