@@ -1,4 +1,4 @@
-DESCRIBE           := $(shell git fetch --all > /dev/null && git describe --match "v*" --always --tags)
+DESCRIBE           := $(shell git fetch --all > /dev/null && git describe --match "stroeer-v*" --always --tags)
 DESCRIBE_PARTS     := $(subst -, ,$(DESCRIBE))
 # 'v0.2.0'
 VERSION_TAG        := $(word 1,$(DESCRIBE_PARTS))
