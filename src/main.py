@@ -100,7 +100,7 @@ def get_sns_topic_for_account(event, sns_pattern, placeholder):
 
 def lambda_handler(event, context):
 
-    default_hook_url = read_env_variable_or_die('HOOK_URL')
+    default_hook_url = os.environ.get('HOOK_URL', None)
     rules_separator = os.environ.get('RULES_SEPARATOR', ',')
     user_rules = parse_rules_from_string(os.environ.get('RULES', ''), rules_separator)
     ignore_rules = parse_rules_from_string(os.environ.get('IGNORE_RULES', ''), rules_separator)
@@ -137,8 +137,6 @@ def lambda_handler(event, context):
 def should_message_be_processed(event, rules, ignore_rules):
     flat_event = flatten_json(event)
     flat_event = {k: v for k, v in flat_event.items() if v is not None}
-    user = event['userIdentity']
-    event_name = event['eventName']
     try:
         for rule in ignore_rules:
             if eval(rule, {}, {'event': flat_event}) is True:
@@ -159,17 +157,23 @@ def should_message_be_processed(event, rules, ignore_rules):
 
 # Handle events
 def handle_event(event, source_file, rules, ignore_rules, hook_url, sns_topic):
-    if should_message_be_processed(event, rules, ignore_rules) is not True and False:
+    if should_message_be_processed(event, rules, ignore_rules) is not True:
         return
     # log full event if it is AccessDenied
     if ('errorCode' in event and 'AccessDenied' in event['errorCode']):
         event_as_string = json.dumps(event, indent=4)
         print(f'errorCode == AccessDenied; log full event: {event_as_string}')
     sns_response = publish_sns(sns_topic, event)
-    message = event_to_slack_message(event, source_file)
-    slack_response = post_slack_message(hook_url, message)
-    if slack_response != 200 or sns_response != 200:
-        raise Exception('Failed to send message to Slack!')
+    if sns_response != 200:
+        raise Exception('Failed to send message to SNS!')
+
+    if hook_url:
+        message = event_to_slack_message(event, source_file)
+        slack_response = post_slack_message(hook_url, message)
+        if slack_response != 200:
+            raise Exception('Failed to send message to Slack!')
+    else:
+        print(f"No hook url found for account {get_account_id_from_event(event)}")
 
 
 # Flatten json
