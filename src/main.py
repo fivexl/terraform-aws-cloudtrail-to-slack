@@ -47,11 +47,12 @@ def publish_sns(sns_topic, event):
     try:
         return sns.publish(
             TargetArn=sns_topic,
-            Message=json.dumps({'default':  json.dumps(event)}),
-            MessageStructure='json'
+            Message=json.dumps(event),
         )['ResponseMetadata']['HTTPStatusCode']
     except Exception as e:
         print(f"Topic {sns_topic}: {e}")
+        if "NotFound" in str(e) or "AuthorizationError" in str(e):
+            return 200
         return 500
 
 def read_env_variable_or_die(env_var_name):
@@ -161,7 +162,7 @@ def handle_event(event, source_file, rules, ignore_rules, hook_url, sns_topic):
         return
     # log full event if it is AccessDenied
     if ('errorCode' in event and 'AccessDenied' in event['errorCode']):
-        event_as_string = json.dumps(event, indent=4)
+        event_as_string = json.dumps(event)
         print(f'errorCode == AccessDenied; log full event: {event_as_string}')
     sns_response = publish_sns(sns_topic, event)
     if sns_response != 200:
@@ -315,5 +316,23 @@ if __name__ == '__main__':
     hook_url = read_env_variable_or_die('HOOK_URL')
     ignore_rules = ["'userIdentity.accountId' in event and event['userIdentity.accountId'] == 'YYYYYYYYYYY'"]
     with open('./test/events.json') as f:
-        data = json.load(f)
+        json_string = json.dumps({
+            "messageType": "DATA_MESSAGE",
+            "owner": "942041421337",
+            "logGroup": "aws-controltower/CloudTrailLogs",
+            "logStream": "942041421337_CloudTrail_eu-west-1_3",
+            "subscriptionFilters": [ "foo-bar"],
+            "logEvents": [{
+                "id": "36735300154870502596213160384635787696492633805025443840",
+                "timestamp": 1647267830193,
+                "message": json.dumps(json.load(f))
+            }]}
+        )
+        compressed_payload = gzip.compress(bytes(json_string, 'utf-8'))
+        encoded_payload = base64.b64encode(compressed_payload)
+        data = {
+            "awslogs": {
+                "data": encoded_payload
+            }
+        }
     lambda_handler(data, {})
