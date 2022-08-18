@@ -1,9 +1,9 @@
-DESCRIBE           := $(shell git fetch --all > /dev/null && git describe --match "stroeer-v*" --always --tags)
+DESCRIBE           := $(shell git fetch --all > /dev/null && git describe --match "v*" --always --tags)
 DESCRIBE_PARTS     := $(subst -, ,$(DESCRIBE))
 # 'v0.2.0'
 VERSION_TAG        := $(word 1,$(DESCRIBE_PARTS))
 # '0.2.0'
-VERSION            := $(subst "stroeer-v",,$(VERSION_TAG))
+VERSION            := $(subst v,,$(VERSION_TAG))
 # '0 2 0'
 VERSION_PARTS      := $(subst ., ,$(VERSION))
 
@@ -19,7 +19,7 @@ NEXT_VERSION		:= $(shell echo $(MAJOR).$$(($(MINOR)+1)).0)
 else
 NEXT_VERSION		:= $(shell echo $(MAJOR).$(MINOR).$$(($(PATCH)+1)))
 endif
-NEXT_TAG 			:= stroeer-v$(NEXT_VERSION)
+NEXT_TAG 			:= v$(NEXT_VERSION)-stroeer
 NEXT_RELEASE_NAME   := $(NEXT_VERSION)
 
 all: fmt validate
@@ -55,7 +55,7 @@ check-git-branch: check-git-clean
 	git fetch origin --tags --prune
 	git checkout master
 
-release: bump documentation
+release: # bump documentation
 	git add README.md docs/part1.md
 	git commit -vsam "Bump version to $(NEXT_TAG)" || true
 	git tag -a $(NEXT_TAG) -m "$(NEXT_TAG)"
@@ -70,6 +70,7 @@ release: bump documentation
     		https://api.github.com/repos/stroeer/terraform-aws-cloudtrail-to-slack/releases \
     		-d "{\"tag_name\":\"$(NEXT_TAG)\",\"generate_release_notes\":true, \"name\": \"$(NEXT_RELEASE_NAME)\"}"; 									\
 	fi;
+
 
 help: ## Display this help screen
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'	
