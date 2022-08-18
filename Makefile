@@ -3,7 +3,7 @@ DESCRIBE_PARTS     := $(subst -, ,$(DESCRIBE))
 # 'v0.2.0'
 VERSION_TAG        := $(word 1,$(DESCRIBE_PARTS))
 # '0.2.0'
-VERSION            := $(subst stroeer-v,,$(VERSION_TAG))
+VERSION            := $(subst "stroeer-v",,$(VERSION_TAG))
 # '0 2 0'
 VERSION_PARTS      := $(subst ., ,$(VERSION))
 
@@ -20,7 +20,7 @@ else
 NEXT_VERSION		:= $(shell echo $(MAJOR).$(MINOR).$$(($(PATCH)+1)))
 endif
 NEXT_TAG 			:= stroeer-v$(NEXT_VERSION)
-NEXT_RELEASE_NAME   := v$(NEXT_VERSION)
+NEXT_RELEASE_NAME   := $(NEXT_VERSION)
 
 all: fmt validate
 
@@ -55,7 +55,7 @@ check-git-branch: check-git-clean
 	git fetch origin --tags --prune
 	git checkout master
 
-release: check-git-branch bump documentation
+release: bump documentation
 	git add README.md docs/part1.md
 	git commit -vsam "Bump version to $(NEXT_TAG)" || true
 	git tag -a $(NEXT_TAG) -m "$(NEXT_TAG)"
