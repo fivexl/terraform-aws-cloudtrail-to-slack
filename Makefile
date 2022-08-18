@@ -3,7 +3,7 @@ DESCRIBE_PARTS     := $(subst -, ,$(DESCRIBE))
 # 'v0.2.0'
 VERSION_TAG        := $(word 1,$(DESCRIBE_PARTS))
 # '0.2.0'
-VERSION            := $(subst v,,$(VERSION_TAG))
+VERSION            := $(subst stroeer-v,,$(VERSION_TAG))
 # '0 2 0'
 VERSION_PARTS      := $(subst ., ,$(VERSION))
 
@@ -20,6 +20,7 @@ else
 NEXT_VERSION		:= $(shell echo $(MAJOR).$(MINOR).$$(($(PATCH)+1)))
 endif
 NEXT_TAG 			:= stroeer-v$(NEXT_VERSION)
+NEXT_RELEASE_NAME   := v$(NEXT_VERSION)
 
 all: fmt validate
 
@@ -67,7 +68,7 @@ release: check-git-branch bump documentation
     		-X POST 																\
     		-H "Accept: application/vnd.github.v3+json"								\
     		https://api.github.com/repos/stroeer/terraform-aws-cloudtrail-to-slack/releases \
-    		-d "{\"tag_name\":\"$(NEXT_TAG)\",\"generate_release_notes\":true}"; 									\
+    		-d "{\"tag_name\":\"$(NEXT_TAG)\",\"generate_release_notes\":true, \"name\": \"$(NEXT_RELEASE_NAME)\"}"; 									\
 	fi;
 
 help: ## Display this help screen
