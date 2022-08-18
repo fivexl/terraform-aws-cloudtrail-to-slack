@@ -21,10 +21,13 @@ import http.client
 import json
 import os
 import sys
+import boto3
 from datetime import datetime
 
 from rules import default_rules
 
+
+sns = boto3.client('sns')
 
 # Slack web hook example
 # https://hooks.slack.com/services/XXXXXXX/XXXXXXX/XXXXXXXXXX
@@ -40,6 +43,16 @@ def post_slack_message(hook_url, message):
     # print('Response: {}, message: {}'.format(response.status, response.read().decode()))
     return response.status
 
+def publish_sns(sns_topic, event):
+    try:
+        return sns.publish(
+            TargetArn=sns_topic,
+            Message=json.dumps({'default':  json.dumps(event)}),
+            MessageStructure='json'
+        )['ResponseMetadata']['HTTPStatusCode']
+    except Exception as e:
+        print(f"Topic {sns_topic}: {e}")
+        return 500
 
 def read_env_variable_or_die(env_var_name):
     value = os.environ.get(env_var_name, '')
@@ -81,6 +94,10 @@ def get_hook_url_for_account(event, configuration, default_hook_url):
     return default_hook_url
 
 
+def get_sns_topic_for_account(event, sns_pattern, placeholder):
+    account_id = get_account_id_from_event(event)
+    return sns_pattern.replace(placeholder, account_id)
+
 def lambda_handler(event, context):
 
     default_hook_url = read_env_variable_or_die('HOOK_URL')
@@ -90,6 +107,8 @@ def lambda_handler(event, context):
     use_default_rules = os.environ.get('USE_DEFAULT_RULES', None)
     events_to_track = os.environ.get('EVENTS_TO_TRACK', None)
     configuration = os.environ.get('CONFIGURATION', None)
+    sns_pattern = os.environ.get('SNS_PATTERN', '')
+    placeholder = os.environ.get('SNS_PATTERN_PLACEHOLDER', '')
     configuration_as_json = json.loads(configuration) if configuration else []
 
     rules = []
@@ -108,7 +127,8 @@ def lambda_handler(event, context):
     records = get_cloudtrail_log_records(event)
     for record in records:
         hook_url = get_hook_url_for_account(record['event'], configuration_as_json, default_hook_url)
-        handle_event(record['event'], record['key'], rules, ignore_rules, hook_url)
+        sns_topic = get_sns_topic_for_account(record['event'], sns_pattern, placeholder)
+        handle_event(record['event'], record['key'], rules, ignore_rules, hook_url, sns_topic)
 
     return 200
 
@@ -138,16 +158,17 @@ def should_message_be_processed(event, rules, ignore_rules):
 
 
 # Handle events
-def handle_event(event, source_file, rules, ignore_rules, hook_url):
-    if should_message_be_processed(event, rules, ignore_rules) is not True:
+def handle_event(event, source_file, rules, ignore_rules, hook_url, sns_topic):
+    if should_message_be_processed(event, rules, ignore_rules) is not True and False:
         return
     # log full event if it is AccessDenied
     if ('errorCode' in event and 'AccessDenied' in event['errorCode']):
         event_as_string = json.dumps(event, indent=4)
         print(f'errorCode == AccessDenied; log full event: {event_as_string}')
+    sns_response = publish_sns(sns_topic, event)
     message = event_to_slack_message(event, source_file)
-    response = post_slack_message(hook_url, message)
-    if response != 200:
+    slack_response = post_slack_message(hook_url, message)
+    if slack_response != 200 or sns_response != 200:
         raise Exception('Failed to send message to Slack!')
 
 

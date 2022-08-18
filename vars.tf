@@ -5,6 +5,11 @@ variable "function_name" {
   type        = string
 }
 
+variable "sns_topic_pattern" {
+  description = "SNS Topic pattern where notifications will be published. Most contain exactly one occurance of ACCOUNT_ID Example: arn:aws:sns:us-east-1:ACCOUNT_ID:cloudtrail"
+  type        = string
+}
+
 variable "configuration" {
   description = "Allows to configure slack web hook url per account(s) so you can separate events from different accounts to different channels. Useful in context of AWS organization"
   type = list(object({
