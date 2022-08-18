@@ -37,6 +37,6 @@
     "readOnly": true,
     "eventType": "AwsApiCall",
     "managementEvent": true,
-    "recipientAccountId": "631418578358",
+    "recipientAccountId": "942041421337",
     "eventCategory": "Management"
 }
