@@ -21,7 +21,7 @@ default_rules = list()
 
 # Notify if someone logged in without MFA but skip notification for SSO logins
 default_rules.append('event["eventName"] == "ConsoleLogin" ' +
-                     'and event["additionalEventData.MFAUsed"] != "Yes" ' +
+                     'and event.get("additionalEventData.MFAUsed", "") != "Yes" ' +
                      'and "assumed-role/AWSReservedSSO" not in event.get("userIdentity.arn", "")')
 # Notify if someone is trying to do something they not supposed to be doing but do not notify
 # about not logged in actions since there are a lot of scans for open buckets that generate noise
