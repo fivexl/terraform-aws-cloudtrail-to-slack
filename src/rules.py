@@ -19,8 +19,8 @@
 # then event will be processed and published to Slack
 default_rules = list()
 
-# Notify if someone logged in without MFA but skip notification for SSO logins
-default_rules.append('event["eventName"] == "ConsoleLogin" ' +
+# Notify if someone logged in but skip notification for SSO logins
+default_rules.append('event.get("eventName", "") == "ConsoleLogin" ' +
                      'and "assumed-role/AWSReservedSSO" not in event.get("userIdentity.arn", "")')
 # Notify if someone is trying to do something they not supposed to be doing but do not notify
 # about not logged in actions since there are a lot of scans for open buckets that generate noise
@@ -30,4 +30,4 @@ default_rules.append('event.get("errorCode", "") == "AccessDenied" ' +
 # Notify about all non-read actions done by root
 default_rules.append('event.get("userIdentity.type", "") == "Root" ' +
                      'and not event["eventName"].startswith(("Get", "List", "Describe", "Head"))')
-default_rules.append('event["eventName"] == "AttachUserPolicy" and "AdministratorAccess" in event.get("requestParameters.policyArn", "")')
+default_rules.append('event.get("eventName", "") == "AttachUserPolicy" and "AdministratorAccess" in event.get("requestParameters.policyArn", "")')
