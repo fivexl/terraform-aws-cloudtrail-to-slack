@@ -48,6 +48,32 @@ def publish_sns(sns_topic, event):
         return sns.publish(
             TargetArn=sns_topic,
             Message=json.dumps(event),
+            MessageAttributes= {
+                "eventSource": {
+                    "Type": "String",
+                    "Value": event["eventSource"]
+                },
+                "eventName": {
+                    "Type": "String",
+                    "Value": event["eventName"]
+                },
+                "errorCode": {
+                    "Type": "String",
+                    "Value": event["errorCode"]
+                },
+                "sourceIPAddress": {
+                    "Type": "String",
+                    "Value": event["sourceIPAddress"]
+                },
+                "userAgent": {
+                    "Type": "String",
+                    "Value": event["userAgent"]
+                },
+                "region": {
+                    "Type": "String",
+                    "Value": event["region"]
+                }
+            }
         )['ResponseMetadata']['HTTPStatusCode']
     except Exception as e:
         print(f"Topic {sns_topic}: {e}")
