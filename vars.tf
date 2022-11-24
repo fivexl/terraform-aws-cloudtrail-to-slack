@@ -72,6 +72,12 @@ variable "lambda_logs_retention_in_days" {
   default     = 30
 }
 
+variable "lambda_recreate_missing_package" {
+  description = "Description: Whether to recreate missing Lambda package if it is missing locally or not"
+  type        = bool
+  default     = true
+}
+
 variable "tags" {
   description = "Tags to attach to resources"
   default     = {}
