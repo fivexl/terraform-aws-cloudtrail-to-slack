@@ -61,7 +61,7 @@ data "aws_ssm_parameter" "hook" {
 
 module "cloudtrail_to_slack" {
   source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "2.0.1"
+  version                        = "3.1.1"
   default_slack_hook_url         = data.aws_ssm_parameter.hook.value
   cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
 }
@@ -97,7 +97,7 @@ data "aws_ssm_parameter" "prod_hook" {
 
 module "cloudtrail_to_slack" {
   source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "2.0.1"
+  version                        = "3.1.1"
   default_slack_hook_url         = data.aws_ssm_parameter.default_hook.value
 
   configuration = [
@@ -148,7 +148,7 @@ locals {
 
 module "cloudtrail_to_slack" {
   source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "2.0.1"
+  version                        = "3.1.1"
   default_slack_hook_url         = data.aws_ssm_parameter.hook.value
   cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
   events_to_track                = local.events_to_track
@@ -177,7 +177,7 @@ data "aws_ssm_parameter" "hook" {
 
 module "cloudtrail_to_slack" {
   source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "2.0.1"
+  version                        = "3.1.1"
   default_slack_hook_url         = data.aws_ssm_parameter.hook.value
   cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
   rules                          = "'errorCode' in event and event['errorCode'] == 'UnauthorizedOperation','userIdentity.type' in event and event['userIdentity.type'] == 'Root'"
@@ -202,7 +202,7 @@ data "aws_ssm_parameter" "hook" {
 
 module "cloudtrail_to_slack" {
   source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "2.0.1"
+  version                        = "3.1.1"
   default_slack_hook_url         = data.aws_ssm_parameter.hook.value
   cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
   rules                          = join(",", local.cloudtrail_rules)
