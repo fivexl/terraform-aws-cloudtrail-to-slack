@@ -11,6 +11,8 @@ module "lambda" {
 
   source_path = "${path.module}/src/"
 
+  recreate_missing_package = var.lambda_recreate_missing_package
+
   environment_variables = merge(
     {
       HOOK_URL        = var.default_slack_hook_url
