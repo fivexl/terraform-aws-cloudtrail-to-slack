@@ -25,6 +25,8 @@ module "lambda" {
     var.use_default_rules ? { USE_DEFAULT_RULES = "True" } : {}
   )
 
+  memory_size = var.lambda_memory_size
+
   cloudwatch_logs_retention_in_days = var.lambda_logs_retention_in_days
 
   attach_policy_json = true

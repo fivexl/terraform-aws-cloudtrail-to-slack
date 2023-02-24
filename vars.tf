@@ -66,6 +66,12 @@ variable "lambda_timeout_seconds" {
   default     = 30
 }
 
+variable "lambda_memory_size" {
+  description = "Amount of memory in MB your Lambda Function can use at runtime. Valid value between 128 MB to 10,240 MB (10 GB), in 64 MB increments."
+  type        = number
+  default     = 256
+}
+
 variable "lambda_logs_retention_in_days" {
   description = "Controls for how long to keep lambda logs."
   type        = number
