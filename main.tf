@@ -5,7 +5,7 @@ module "lambda" {
   function_name = var.function_name
   description   = "Send CloudTrail Events to Slack"
   handler       = "main.lambda_handler"
-  runtime       = "python3.8"
+  runtime       = "python3.9"
   timeout       = var.lambda_timeout_seconds
   publish       = true
 
