@@ -304,8 +304,8 @@ default_rules.append('event["eventName"] == "ConsoleLogin" ' +
 # This is useful to discover any misconfigurations in your account. Time to time services will try
 # to do something but fail due to IAM permissions and those errors are very hard to find using
 # other means
-default_rules.append('event.get("errorCode", "") == "*UnauthorizedOperation"')
-default_rules.append('event.get("errorCode", "") == "AccessDenied*" ' +
+default_rules.append('event.get("errorCode", "").endswith(("UnauthorizedOperation"))')
+default_rules.append('event.get("errorCode", "").startswith(("AccessDenied"))' +
                      'and (event.get("userIdentity.accountId", "") != "ANONYMOUS_PRINCIPAL")')
 
 # Notify about all non-read actions done by root

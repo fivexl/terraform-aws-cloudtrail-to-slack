@@ -25,8 +25,8 @@ default_rules.append('event["eventName"] == "ConsoleLogin" ' +
                      'and "assumed-role/AWSReservedSSO" not in event.get("userIdentity.arn", "")')
 # Notify if someone is trying to do something they not supposed to be doing but do not notify
 # about not logged in actions since there are a lot of scans for open buckets that generate noise
-default_rules.append('event.get("errorCode", "") == "*UnauthorizedOperation"')
-default_rules.append('event.get("errorCode", "") == "AccessDenied*" ' +
+default_rules.append('event.get("errorCode", "").endswith(("UnauthorizedOperation"))')
+default_rules.append('event.get("errorCode", "").startswith(("AccessDenied"))' +
                      'and (event.get("userIdentity.accountId", "") != "ANONYMOUS_PRINCIPAL")')
 # Notify about all non-read actions done by root
 default_rules.append('event.get("userIdentity.type", "") == "Root" ' +
