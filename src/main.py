@@ -22,12 +22,23 @@ import json
 import os
 import sys
 import boto3
+import urllib3
 from datetime import datetime
 
 from rules import default_rules
 
 
 sns = boto3.client('sns')
+http_client = urllib3.PoolManager()
+
+### Define function to retrieve values from extension local HTTP server cachce
+def retrieve_extension_value(url):
+    port = os.environ['PARAMETERS_SECRETS_EXTENSION_HTTP_PORT']
+    url = ('http://localhost:' + port + url)
+    headers = { "X-Aws-Parameters-Secrets-Token": os.environ.get('AWS_SESSION_TOKEN') }
+    response = http_client.request("GET", url, headers=headers)
+    response = json.loads(response.data)
+    return response
 
 # Slack web hook example
 # https://hooks.slack.com/services/XXXXXXX/XXXXXXX/XXXXXXXXXX
@@ -99,13 +110,14 @@ def get_sns_topic_for_account(event, sns_pattern, placeholder):
 
 def lambda_handler(event, context):
 
+    config_ssm_parameter_name = os.environ.get('CONFIG_SSM_PARAMETER_NAME', 'None')
     default_hook_url = os.environ.get('HOOK_URL', None)
     rules_separator = os.environ.get('RULES_SEPARATOR', ',')
     user_rules = parse_rules_from_string(os.environ.get('RULES', ''), rules_separator)
     ignore_rules = parse_rules_from_string(os.environ.get('IGNORE_RULES', ''), rules_separator)
     use_default_rules = os.environ.get('USE_DEFAULT_RULES', None)
     events_to_track = os.environ.get('EVENTS_TO_TRACK', None)
-    configuration = os.environ.get('CONFIGURATION', None)
+    configuration = retrieve_extension_value(('/systemsmanager/parameters/get/?name=' + config_ssm_parameter_name))['Parameter']['Value']
     sns_pattern = os.environ.get('SNS_PATTERN', '')
     placeholder = os.environ.get('SNS_PATTERN_PLACEHOLDER', '')
     configuration_as_json = json.loads(configuration) if configuration else []
