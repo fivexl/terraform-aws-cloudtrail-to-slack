@@ -15,37 +15,37 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import json
 import gzip
-import sys
-import os
 import http.client
-import boto3
+import json
+import os
+import sys
 import urllib
 from datetime import datetime
 
+import boto3
 from rules import default_rules
 
 
 # Slack web hook example
 # https://hooks.slack.com/services/XXXXXXX/XXXXXXX/XXXXXXXXXX
 def post_slack_message(hook_url, message):
-    print(f'Sending message: {json.dumps(message)}')
-    headers = {'Content-type': 'application/json'}
-    connection = http.client.HTTPSConnection('hooks.slack.com')
-    connection.request('POST',
-                       hook_url.replace('https://hooks.slack.com', ''),
+    print(f"Sending message: {json.dumps(message)}")
+    headers = {"Content-type": "application/json"}
+    connection = http.client.HTTPSConnection("hooks.slack.com")
+    connection.request("POST",
+                       hook_url.replace("https://hooks.slack.com", ""),
                        json.dumps(message),
                        headers)
     response = connection.getresponse()
-    print('Response: {}, message: {}'.format(response.status, response.read().decode()))
+    print("Response: {}, message: {}".format(response.status, response.read().decode()))
     return response.status
 
 
-def read_env_variable_or_die(env_var_name):
-    value = os.environ.get(env_var_name, '')
-    if value == '':
-        message = f'Required env variable {env_var_name} is not defined or set to empty string'
+def read_env_variable_or_die(env_var_name) -> str:
+    value = os.environ.get(env_var_name, "")
+    if value == "":
+        message = f"Required env variable {env_var_name} is not defined or set to empty string"
         raise EnvironmentError(message)
     return value
 
@@ -54,42 +54,42 @@ def get_cloudtrail_log_records(event):
     # Get all the files from S3 so we can process them
     records = []
 
-    s3 = boto3.client('s3')
-    for record in event['Records']:
+    s3 = boto3.client("s3")
+    for record in event["Records"]:
         # In case if we get something unexpected
-        if 's3' not in record:
-            raise AssertionError(f'recieved record does not contain s3 section: {record}')
-        bucket = record['s3']['bucket']['name']
-        key = urllib.parse.unquote_plus(record['s3']['object']['key'], encoding='utf-8')
+        if "s3" not in record:
+            raise AssertionError(f"recieved record does not contain s3 section: {record}")
+        bucket = record["s3"]["bucket"]["name"]
+        key = urllib.parse.unquote_plus(record["s3"]["object"]["key"], encoding="utf-8")
         # Do not process digest files
-        if 'Digest' in key:
+        if "Digest" in key:
             continue
         try:
             response = s3.get_object(Bucket=bucket, Key=key)
             with gzip.GzipFile(fileobj=response["Body"]) as gzipfile:
                 content = gzipfile.read()
-            content_as_json = json.loads(content.decode('utf8'))
+            content_as_json = json.loads(content.decode("utf8"))
             records.append(
                 {
-                    'key': key,
-                    'events': content_as_json['Records'],
-                    'eventName': record['eventName']
+                    "key": key,
+                    "events": content_as_json["Records"],
+                    "eventName": record["eventName"]
                 }
             )
         except Exception as e:
             print(e)
-            print(f'Error getting object {key} from bucket {bucket}')
+            print(f"Error getting object {key} from bucket {bucket}")
             raise e
     return records
 
 
 def get_account_id_from_event(event):
-    return event['userIdentity']['accountId'] if 'accountId' in event['userIdentity'] else ''
+    return event["userIdentity"]["accountId"] if "accountId" in event["userIdentity"] else ""
 
 
 def get_hook_url_for_account(event, configuration, default_hook_url):
     accoun_id = get_account_id_from_event(event)
-    hook_url = [cfg['slack_hook_url'] for cfg in configuration if accoun_id in cfg['accounts']]
+    hook_url = [cfg["slack_hook_url"] for cfg in configuration if accoun_id in cfg["accounts"]]
     if len(hook_url) > 0:
         return hook_url[0]
     return default_hook_url
@@ -97,13 +97,13 @@ def get_hook_url_for_account(event, configuration, default_hook_url):
 
 def lambda_handler(event, context):
 
-    default_hook_url = read_env_variable_or_die('HOOK_URL')
-    rules_separator = os.environ.get('RULES_SEPARATOR', ',')
-    user_rules = parse_rules_from_string(os.environ.get('RULES', ''), rules_separator)
-    ignore_rules = parse_rules_from_string(os.environ.get('IGNORE_RULES', ''), rules_separator)
-    use_default_rules = os.environ.get('USE_DEFAULT_RULES', None)
-    events_to_track = os.environ.get('EVENTS_TO_TRACK', None)
-    configuration = os.environ.get('CONFIGURATION', None)
+    default_hook_url = read_env_variable_or_die("HOOK_URL")
+    rules_separator = os.environ.get("RULES_SEPARATOR", ",")
+    user_rules = parse_rules_from_string(os.environ.get("RULES", ""), rules_separator)
+    ignore_rules = parse_rules_from_string(os.environ.get("IGNORE_RULES", ""), rules_separator)
+    use_default_rules = os.environ.get("USE_DEFAULT_RULES", None)
+    events_to_track = os.environ.get("EVENTS_TO_TRACK", None)
+    configuration = os.environ.get("CONFIGURATION", None)
     configuration_as_json = json.loads(configuration) if configuration else []
     rules = []
     if use_default_rules:
@@ -114,18 +114,18 @@ def lambda_handler(event, context):
         events_list = events_to_track.replace(" ", "").split(",")
         rules.append(f'"eventName" in event and event["eventName"] in {json.dumps(events_list)}')
     if not rules:
-        raise Exception('Have no rules to apply!!! '
-                        + 'Check configuration - add some rules or enable default rules')
-    print(f'Match rules:\n{rules}\nIgnore rules:\n{ignore_rules}')
+        raise Exception("Have no rules to apply!!! "
+                        + "Check configuration - add some rules or enable default rules")
+    print(f"Match rules:\n{rules}\nIgnore rules:\n{ignore_rules}")
 
     records = get_cloudtrail_log_records(event)
     for record in records:
-        if 's3:ObjectRemoved' in record['eventName']:
+        if "s3:ObjectRemoved" in record["eventName"]:
             # TODO: Handle deletion
             continue
-        for log_event in record['events']:
+        for log_event in record["events"]:
             hook_url = get_hook_url_for_account(log_event, configuration_as_json, default_hook_url)
-            handle_event(log_event, record['key'], rules, ignore_rules, hook_url)
+            handle_event(log_event, record["key"], rules, ignore_rules, hook_url)
 
     return 200
 
@@ -133,23 +133,23 @@ def lambda_handler(event, context):
 # Filter out events
 def should_message_be_processed(event, rules, ignore_rules):
     flat_event = flatten_json(event)
-    user = event['userIdentity']
-    event_name = event['eventName']
+    user = event["userIdentity"]
+    event_name = event["eventName"]
     try:
         for rule in ignore_rules:
-            if eval(rule, {}, {'event': flat_event}) is True:
-                print('Event matched ignore rule and will not be processed.\n' +
-                      f'Rule: {rule}\nEvent: {flat_event}')
+            if eval(rule, {}, {"event": flat_event}) is True:
+                print("Event matched ignore rule and will not be processed.\n" +
+                      f"Rule: {rule}\nEvent: {flat_event}")
                 return False  # do not process event
         for rule in rules:
-            if eval(rule, {}, {'event': flat_event}) is True:
-                print(f'Event matched rule and will be processed.\nRule:{rule}\nEvent: {flat_event}')
+            if eval(rule, {}, {"event": flat_event}) is True:
+                print(f"Event matched rule and will be processed.\nRule:{rule}\nEvent: {flat_event}")
                 return True  # do send notification about event
     except Exception:
-        print(f'Event parsing failed: {sys.exc_info()[0]}.\n'
-              + f'Rule: {rule}\nEvent: {event}\nFlat event: {flat_event}')
+        print(f"Event parsing failed: {sys.exc_info()[0]}.\n"
+              + f"Rule: {rule}\nEvent: {event}\nFlat event: {flat_event}")
         raise
-    print(f'did not match any rules: event {event_name} called by {user}')
+    print(f"did not match any rules: event {event_name} called by {user}")
     return False
 
 
@@ -158,27 +158,27 @@ def handle_event(event, source_file, rules, ignore_rules, hook_url):
     if should_message_be_processed(event, rules, ignore_rules) is not True:
         return
     # log full event if it is AccessDenied
-    if ('errorCode' in event and 'AccessDenied' in event['errorCode']):
+    if ("errorCode" in event and "AccessDenied" in event["errorCode"]):
         event_as_string = json.dumps(event, indent=4)
-        print(f'errorCode == AccessDenied; log full event: {event_as_string}')
+        print(f"errorCode == AccessDenied; log full event: {event_as_string}")
     message = event_to_slack_message(event, source_file)
     response = post_slack_message(hook_url, message)
     if response != 200:
-        raise Exception('Failed to send message to Slack!')
+        raise Exception("Failed to send message to Slack!")
 
 
 # Flatten json
 def flatten_json(y):
     out = {}
 
-    def flatten(x, name=''):
+    def flatten(x, name=""):
         if type(x) is dict:
             for a in x:
-                flatten(x[a], name + a + '.')
+                flatten(x[a], name + a + ".")
         elif type(x) is list:
             i = 0
             for a in x:
-                flatten(a, name + str(i) + '.')
+                flatten(a, name + str(i) + ".")
                 i += 1
         else:
             out[name[:-1]] = x
@@ -197,28 +197,28 @@ def parse_rules_from_string(rules_as_string, rules_separator):
 # Format message
 def event_to_slack_message(event, source_file):
 
-    event_name = event['eventName']
-    error_code = event['errorCode'] if 'errorCode' in event else None
-    error_message = event['errorMessage'] if 'errorMessage' in event else None
-    request_parameters = event['requestParameters'] if 'requestParameters' in event else None
-    response_elements = event['responseElements'] if 'responseElements' in event else None
-    additional_details = event['additionalEventData'] if 'additionalEventData' in event else None
-    event_time = datetime.strptime(event['eventTime'], '%Y-%m-%dT%H:%M:%SZ')
-    event_id = event['eventID']
-    actor = event['userIdentity']['arn'] if 'arn' in event['userIdentity'] else event['userIdentity']
+    event_name = event["eventName"]
+    error_code = event.get("errorCode") #event['errorCode'] if 'errorCode' in event else None  22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222
+    error_message = event["errorMessage"] if "errorMessage" in event else None
+    request_parameters = event["requestParameters"] if "requestParameters" in event else None
+    response_elements = event["responseElements"] if "responseElements" in event else None
+    additional_details = event["additionalEventData"] if "additionalEventData" in event else None
+    event_time = datetime.strptime(event["eventTime"], "%Y-%m-%dT%H:%M:%SZ")
+    event_id = event["eventID"]
+    actor = event["userIdentity"]["arn"] if "arn" in event["userIdentity"] else event["userIdentity"]
     account_id = get_account_id_from_event(event)
-    title = f'*{actor}* called *{event_name}*'
+    title = f"*{actor}* called *{event_name}*"
     if error_code is not None:
-        title = f':warning: {title} but failed due to ```{error_code}``` :warning:'
-    blocks = list()
-    contexts = list()
+        title = f":warning: {title} but failed due to ```{error_code}``` :warning:"
+    blocks = []
+    contexts = []
 
     blocks.append(
         {
-            'type': 'section',
-            'text': {
-                'type': 'mrkdwn',
-                'text': title
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": title
             }
         }
     )
@@ -226,80 +226,80 @@ def event_to_slack_message(event, source_file):
     if error_message is not None:
         blocks.append(
             {
-                'type': 'section',
-                'text': {
-                    'type': 'mrkdwn',
-                    'text': f'*Error message:* ```{error_message}```'
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Error message:* ```{error_message}```"
                 }
             }
         )
 
-    if event_name == 'ConsoleLogin' and event['additionalEventData']['MFAUsed'] != 'Yes':
+    if event_name == "ConsoleLogin" and event["additionalEventData"]["MFAUsed"] != "Yes":
         blocks.append(
             {
-                'type': 'section',
-                'text': {
-                    'type': 'mrkdwn',
-                    'text': ':warning: *Login without MFA!* :warning:'
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": ":warning: *Login without MFA!* :warning:"
                 }
             }
         )
 
     if request_parameters is not None:
         contexts.append({
-            'type': 'mrkdwn',
-            'text': f'*requestParameters:* ```{json.dumps(request_parameters, indent=4)}```'
+            "type": "mrkdwn",
+            "text": f"*requestParameters:* ```{json.dumps(request_parameters, indent=4)}```"
         })
 
     if response_elements is not None:
         contexts.append({
-            'type': 'mrkdwn',
-            'text': f'*responseElements:* ```{json.dumps(response_elements, indent=4)}```'
+            "type": "mrkdwn",
+            "text": f"*responseElements:* ```{json.dumps(response_elements, indent=4)}```"
         })
 
     if additional_details is not None:
         contexts.append({
-            'type': 'mrkdwn',
-            'text': f'*additionalEventData:* ```{json.dumps(additional_details, indent=4)}```'
+            "type": "mrkdwn",
+            "text": f"*additionalEventData:* ```{json.dumps(additional_details, indent=4)}```"
         })
 
     contexts.append({
-        'type': 'mrkdwn',
-        'text': f'Time: {event_time} UTC'
+        "type": "mrkdwn",
+        "text": f"Time: {event_time} UTC"
     })
 
     contexts.append({
-        'type': 'mrkdwn',
-        'text': f'Id: {event_id}'
+        "type": "mrkdwn",
+        "text": f"Id: {event_id}"
     })
 
     contexts.append({
-        'type': 'mrkdwn',
-        'text': f'Account Id: {account_id}'
+        "type": "mrkdwn",
+        "text": f"Account Id: {account_id}"
     })
 
     contexts.append({
-        'type': 'mrkdwn',
-        'text': f'Event location in s3:\n{source_file}'
+        "type": "mrkdwn",
+        "text": f"Event location in s3:\n{source_file}"
     })
 
     blocks.append({
-        'type': 'context',
-        'elements': contexts
+        "type": "context",
+        "elements": contexts
     })
 
-    blocks.append({'type': 'divider'})
+    blocks.append({"type": "divider"})
 
-    message = {'blocks': blocks}
+    message = {"blocks": blocks}
 
     return message
 
 
 # For local testing
-if __name__ == '__main__':
-    hook_url = read_env_variable_or_die('HOOK_URL')
+if __name__ == "__main__":
+    hook_url = read_env_variable_or_die("HOOK_URL")
     ignore_rules = ["'userIdentity.accountId' in event and event['userIdentity.accountId'] == 'YYYYYYYYYYY'"]
-    with open('./test/events.json') as f:
+    with open("./test/events.json") as f:
         data = json.load(f)
     for event in data:
-        handle_event(event, 'file_name', default_rules, ignore_rules, hook_url)
+        handle_event(event, "file_name", default_rules, ignore_rules, hook_url)

@@ -1,0 +1,20 @@
+name: Update review branch
+
+on:
+  workflow_dispatch:
+
+jobs:
+  review:
+    name: Review
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Update review branch
+      id: update-review
+      run: |
+        git push origin main:review
