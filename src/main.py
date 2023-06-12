@@ -22,6 +22,7 @@ import os
 import sys
 import urllib
 from datetime import datetime
+from errors import ParsingEventError
 
 import boto3
 from rules import default_rules
@@ -135,20 +136,25 @@ def should_message_be_processed(event, rules, ignore_rules):
     flat_event = flatten_json(event)
     user = event["userIdentity"]
     event_name = event["eventName"]
-    try:
-        for rule in ignore_rules:
-            if eval(rule, {}, {"event": flat_event}) is True:
-                print("Event matched ignore rule and will not be processed.\n" +
+    for rule in ignore_rules:
+        try:
+            if eval(rule, {}, {"event": flat_event}) is True: # noqa: PGH001
+                print("Event matched ignore rule and will not be processed.\n"
                       f"Rule: {rule}\nEvent: {flat_event}")
                 return False  # do not process event
-        for rule in rules:
-            if eval(rule, {}, {"event": flat_event}) is True:
+        except ParsingEventError as e:
+            print(f"Event parsing failed: {e}.\n"
+                  f"Rule: {rule}\nEvent: {event}\nFlat event: {flat_event}")
+            continue
+    for rule in rules:
+        try:
+            if eval(rule, {}, {"event": flat_event}) is True: # noqa: PGH001
                 print(f"Event matched rule and will be processed.\nRule:{rule}\nEvent: {flat_event}")
                 return True  # do send notification about event
-    except Exception:
-        print(f"Event parsing failed: {sys.exc_info()[0]}.\n"
-              + f"Rule: {rule}\nEvent: {event}\nFlat event: {flat_event}")
-        raise
+        except ParsingEventError as e:
+            print(f"Event parsing failed: {e}.\n"
+                  f"Rule: {rule}\nEvent: {event}\nFlat event: {flat_event}")
+            continue
     print(f"did not match any rules: event {event_name} called by {user}")
     return False
 
