@@ -64,7 +64,7 @@ exclude = [
 ]
 
 # Same as Black.
-line-length = 140
+line-length = 110
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
