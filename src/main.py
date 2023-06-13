@@ -19,18 +19,18 @@ import gzip
 import http.client
 import json
 import os
-import sys
 import urllib
 from datetime import datetime
-from errors import ParsingEventError
+from typing import Any, Dict, List, Union
 
 import boto3
+from errors import ParsingEventError
 from rules import default_rules
 
 
 # Slack web hook example
 # https://hooks.slack.com/services/XXXXXXX/XXXXXXX/XXXXXXXXXX
-def post_slack_message(hook_url, message):
+def post_slack_message(hook_url: str, message: dict) -> int:
     print(f"Sending message: {json.dumps(message)}")
     headers = {"Content-type": "application/json"}
     connection = http.client.HTTPSConnection("hooks.slack.com")
@@ -43,15 +43,15 @@ def post_slack_message(hook_url, message):
     return response.status
 
 
-def read_env_variable_or_die(env_var_name) -> str:
-    value = os.environ.get(env_var_name, "")
-    if value == "":
-        message = f"Required env variable {env_var_name} is not defined or set to empty string"
+def read_env_variable_or_die(env_var_name: str) -> str:
+    value = os.environ.get(env_var_name)
+    if value is None:
+        message = f"Required env variable {env_var_name} is not defined."
         raise EnvironmentError(message)
     return value
 
 
-def get_cloudtrail_log_records(event):
+def get_cloudtrail_log_records(event: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
     # Get all the files from S3 so we can process them
     records = []
 
@@ -84,11 +84,15 @@ def get_cloudtrail_log_records(event):
     return records
 
 
-def get_account_id_from_event(event):
+def get_account_id_from_event(event: dict) -> str:
     return event["userIdentity"]["accountId"] if "accountId" in event["userIdentity"] else ""
 
 
-def get_hook_url_for_account(event, configuration, default_hook_url):
+def get_hook_url_for_account(
+        event: dict,
+        configuration: List[Dict[str, Union[List[str], str]]],
+        default_hook_url: str
+) -> str:
     accoun_id = get_account_id_from_event(event)
     hook_url = [cfg["slack_hook_url"] for cfg in configuration if accoun_id in cfg["accounts"]]
     if len(hook_url) > 0:
@@ -96,15 +100,14 @@ def get_hook_url_for_account(event, configuration, default_hook_url):
     return default_hook_url
 
 
-def lambda_handler(event, context):
-
+def lambda_handler(event: Dict[str, List[Any]], __) -> int: # type: ignore # noqa: ANN001, PGH003
     default_hook_url = read_env_variable_or_die("HOOK_URL")
     rules_separator = os.environ.get("RULES_SEPARATOR", ",")
     user_rules = parse_rules_from_string(os.environ.get("RULES", ""), rules_separator)
     ignore_rules = parse_rules_from_string(os.environ.get("IGNORE_RULES", ""), rules_separator)
-    use_default_rules = os.environ.get("USE_DEFAULT_RULES", None)
-    events_to_track = os.environ.get("EVENTS_TO_TRACK", None)
-    configuration = os.environ.get("CONFIGURATION", None)
+    use_default_rules = os.environ.get("USE_DEFAULT_RULES")
+    events_to_track = os.environ.get("EVENTS_TO_TRACK")
+    configuration = os.environ.get("CONFIGURATION")
     configuration_as_json = json.loads(configuration) if configuration else []
     rules = []
     if use_default_rules:
@@ -115,8 +118,7 @@ def lambda_handler(event, context):
         events_list = events_to_track.replace(" ", "").split(",")
         rules.append(f'"eventName" in event and event["eventName"] in {json.dumps(events_list)}')
     if not rules:
-        raise Exception("Have no rules to apply!!! "
-                        + "Check configuration - add some rules or enable default rules")
+        raise Exception("Have no rules to apply! Check configuration - add some, or enable default.")
     print(f"Match rules:\n{rules}\nIgnore rules:\n{ignore_rules}")
 
     records = get_cloudtrail_log_records(event)
@@ -132,7 +134,7 @@ def lambda_handler(event, context):
 
 
 # Filter out events
-def should_message_be_processed(event, rules, ignore_rules):
+def should_message_be_processed(event: Dict, rules: List[str], ignore_rules: List[str]) -> bool:
     flat_event = flatten_json(event)
     user = event["userIdentity"]
     event_name = event["eventName"]
@@ -160,7 +162,13 @@ def should_message_be_processed(event, rules, ignore_rules):
 
 
 # Handle events
-def handle_event(event, source_file, rules, ignore_rules, hook_url):
+def handle_event(
+    event: dict,
+    source_file, # noqa: ANN001 TODO: type
+    rules: List[str],
+    ignore_rules: List[str],
+    hook_url: str
+) -> None:
     if should_message_be_processed(event, rules, ignore_rules) is not True:
         return
     # log full event if it is AccessDenied
@@ -169,15 +177,15 @@ def handle_event(event, source_file, rules, ignore_rules, hook_url):
         print(f"errorCode == AccessDenied; log full event: {event_as_string}")
     message = event_to_slack_message(event, source_file)
     response = post_slack_message(hook_url, message)
-    if response != 200:
+    if response != 200: # noqa: PLR2004 TODO
         raise Exception("Failed to send message to Slack!")
 
 
 # Flatten json
-def flatten_json(y):
+def flatten_json(y: dict) -> dict:
     out = {}
 
-    def flatten(x, name=""):
+    def flatten(x, name=""): # noqa: ANN001, ANN202
         if type(x) is dict:
             for a in x:
                 flatten(x[a], name + a + ".")
@@ -194,21 +202,20 @@ def flatten_json(y):
 
 
 # Parse rules from string
-def parse_rules_from_string(rules_as_string, rules_separator):
+def parse_rules_from_string(rules_as_string: str, rules_separator: str) -> List[str]:
     rules_as_list = rules_as_string.split(rules_separator)
     # make sure there are no empty strings in the list
     return [x for x in rules_as_list if x]
 
 
 # Format message
-def event_to_slack_message(event, source_file):
-
+def event_to_slack_message(event: Dict, source_file) -> Dict[str, Any]: # noqa: ANN001
     event_name = event["eventName"]
-    error_code = event.get("errorCode") #event['errorCode'] if 'errorCode' in event else None  22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222
-    error_message = event["errorMessage"] if "errorMessage" in event else None
-    request_parameters = event["requestParameters"] if "requestParameters" in event else None
-    response_elements = event["responseElements"] if "responseElements" in event else None
-    additional_details = event["additionalEventData"] if "additionalEventData" in event else None
+    error_code = event.get("errorCode")
+    error_message = event.get("errorMessage")
+    request_parameters = event.get("requestParameters")
+    response_elements = event.get("responseElements")
+    additional_details = event.get("additionalEventData")
     event_time = datetime.strptime(event["eventTime"], "%Y-%m-%dT%H:%M:%SZ")
     event_id = event["eventID"]
     actor = event["userIdentity"]["arn"] if "arn" in event["userIdentity"] else event["userIdentity"]
