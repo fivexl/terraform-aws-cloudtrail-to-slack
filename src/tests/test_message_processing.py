@@ -1,6 +1,7 @@
 import pytest
 from main import should_message_be_processed
-# ruff: noqa: ANN201, ANN001
+
+# ruff: noqa: ANN201, ANN001, E501
 
 rules = {
     "console_login_without_MFA_and_SSO": {
@@ -22,6 +23,18 @@ rules = {
         "description": "Any non-read actions performed by the root user.",
         "condition": "event.get('userIdentity.type', '') == 'Root' "
                       "and not event['eventName'].startswith(('Get', 'List', 'Describe', 'Head'))"
+    },
+    "cloudtrail_stop_logging": {
+        "description": "CloudTrail StopLogging event",
+        "condition": "event.get('eventSource') == 'cloudtrail.amazonaws.com' and event['eventName'] == 'StopLogging'"
+    },
+    "cloudtrail_update_trail": {
+        "description": "CloudTrail UpdateTrail event",
+        "condition": "event.get('eventSource') == 'cloudtrail.amazonaws.com' and event['eventName'] == 'UpdateTrail'"
+    },
+    "cloudtrail_delete_trail": {
+        "description": "CloudTrail DeleteTrail event",
+        "condition": "event.get('eventSource') == 'cloudtrail.amazonaws.com' and event['eventName'] == 'DeleteTrail'"
     },
 }
 
@@ -60,6 +73,144 @@ rules = {
                     "eventID": "0e4d136e-25d4-4d92-b2b2-8a9fe1e3f1af",
                     "eventType": "AwsConsoleSignIn",
                     "recipientAccountId": "XXXXXXXXXXX"
+                },
+            },
+            "out": {
+                "result": True,
+            },
+        },
+        {
+            "in": {
+                "rule_name": "cloudtrail_stop_logging",
+                "rules": [rules["cloudtrail_stop_logging"]],
+                "ignore_rules": [rules["cloudtrail_stop_logging"]],
+                "event": {
+                    "eventVersion": "1.09",
+                    "userIdentity": {
+                        "type": "AssumedRole",
+                        "principalId": "XXXXXXXXXXXXXXXXXXXXXX",
+                        "arn": "arn:aws:sts::XXXXXXXXXXX",
+                        "accountId": "XXXXXXXXXXX",
+                        "accessKeyId": "XXXXXXXXXXX",
+                        "sessionContext": {
+                            "sessionIssuer": {
+                                "type": "Role",
+                                "principalId": "XXXXXXXXXXX",
+                                "arn": "XXXXXXXXXXX",
+                                "accountId": "XXXXXXXXXXX",
+                                "userName": "XXXXXXXXXXX"
+                            },
+                        }
+                    },
+                    "eventTime": "2023-06-13T11:03:44Z",
+                    "eventSource": "cloudtrail.amazonaws.com",
+                    "eventName": "StopLogging",
+                    "awsRegion": "eu-central-1",
+                    "sourceIPAddress": "XXXXXXXXXXX",
+                    "userAgent": "AWS Internal",
+                    "requestParameters": {
+                        "name": "XXXXXXXXXXX"
+                    },
+                    "responseElements": "null",
+                    "requestID": "XXXXXXXXXXX",
+                    "eventID": "XXXXXXXXXXX",
+                    "readOnly": "false",
+                    "eventType": "AwsApiCall",
+                    "managementEvent": "true",
+                    "recipientAccountId": "XXXXXXXXXXX",
+                    "eventCategory": "Management",
+                    "sessionCredentialFromConsole": "true"
+                },
+            },
+            "out": {
+                "result": True,
+            },
+        },
+        {
+            "in": {
+                "rule_name": "cloudtrail_update_trail",
+                "rules": [rules["cloudtrail_update_trail"]],
+                "ignore_rules": [rules["cloudtrail_update_trail"]],
+                "event": {
+                    "eventVersion": "1.09",
+                    "userIdentity": {
+                        "type": "AssumedRole",
+                        "principalId": "XXXXXXXXXXX",
+                        "arn": "XXXXXXXXXXX",
+                        "accountId": "XXXXXXXXXXX",
+                        "accessKeyId": "XXXXXXXXXXX",
+                        "sessionContext": {
+                            "sessionIssuer": {
+                                "type": "Role",
+                                "principalId": "XXXXXXXXXXX",
+                                "arn": "XXXXXXXXXXX",
+                                "accountId": "XXXXXXXXXXX",
+                                "userName": "XXXXXXXXXXX"
+                            },
+                            },
+                        },
+                    "eventTime": "2023-06-13T11:04:48Z",
+                    "eventSource": "cloudtrail.amazonaws.com",
+                    "eventName": "UpdateTrail",
+                    "awsRegion": "XXXXXXXXXXX",
+                    "sourceIPAddress": "XXXXXXXXXXX",
+                    "userAgent": "AWS Internal",
+                    "requestParameters": {},
+                    "responseElements": {},
+                    "requestID": "XXXXXXXXXXX",
+                    "eventID": "XXXXXXXXXXX",
+                    "readOnly": "false",
+                    "eventType": "AwsApiCall",
+                    "managementEvent": "true",
+                    "recipientAccountId": "XXXXXXXXXXX",
+                    "eventCategory": "Management",
+                },
+            },
+            "out": {
+                "result": True,
+            },
+        },
+        {
+            "in": {
+                "rule_name": "cloudtrail_delete_trail",
+                "rules": [rules["cloudtrail_delete_trail"]],
+                "ignore_rules": [rules["cloudtrail_delete_trail"]],
+                "event": {
+                    "eventVersion": "1.09",
+                    "userIdentity": {
+                        "type": "AssumedRole",
+                        "principalId": "XXXXXXXXXXX",
+                        "arn": "XXXXXXXXXXX",
+                        "accountId": "XXXXXXXXXXX",
+                        "accessKeyId": "XXXXXXXXXXX",
+                        "sessionContext": {
+                            "sessionIssuer": {
+                                "type": "Role",
+                                "principalId": "XXXXXXXXXXX",
+                                "arn": "XXXXXXXXXXX",
+                                "accountId": "XXXXXXXXXXX",
+                                "userName": "XXXXXXXXXXX"
+                            },
+                            },
+                        },
+                    "eventTime": "2023-06-13T11:04:59Z",
+                    "eventSource": "cloudtrail.amazonaws.com",
+                    "eventName": "DeleteTrail",
+                    "awsRegion": "XXXXXXXXXXX",
+                    "sourceIPAddress": "XXXXXXXXXXX",
+                    "userAgent": "AWS Internal",
+                    "requestParameters": {
+                        "name": "XXXXXXXXXXX"
+                    },
+                    "responseElements": "null",
+                    "requestID": "XXXXXXXXXXX",
+                    "eventID": "XXXXXXXXXXX",
+                    "readOnly": "false",
+                    "eventType": "AwsApiCall",
+                    "managementEvent": "true",
+                    "recipientAccountId": "XXXXXXXXXXX",
+                    "eventCategory": "Management",
+                    "sessionCredentialFromConsole": "true"
                 },
             },
             "out": {
@@ -220,6 +371,45 @@ def message_should_be_processed_test_cases(request):
             "in": {
                 "rule_name": "console_login_without_MFA_and_SSO",
                 "rules": [rules["console_login_without_MFA_and_SSO"]],
+                "event":{
+                    "userIdentity": "123",
+                    "eventName": "empty_event"
+                },
+            },
+            "out": {
+                "result": False,
+            },
+        },
+        {
+            "in": {
+                "rule_name": "cloudtrail_stop_logging",
+                "rules": [rules["cloudtrail_stop_logging"]],
+                "event":{
+                    "userIdentity": "123",
+                    "eventName": "empty_event"
+                },
+            },
+            "out": {
+                "result": False,
+            },
+        },
+        {
+            "in": {
+                "rule_name": "cloudtrail_update_trail",
+                "rules": [rules["cloudtrail_update_trail"]],
+                "event":{
+                    "userIdentity": "123",
+                    "eventName": "empty_event"
+                },
+            },
+            "out": {
+                "result": False,
+            },
+        },
+        {
+            "in": {
+                "rule_name": "cloudtrail_delete_trail",
+                "rules": [rules["cloudtrail_delete_trail"]],
                 "event":{
                     "userIdentity": "123",
                     "eventName": "empty_event"
