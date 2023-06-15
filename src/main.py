@@ -14,24 +14,58 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
 import gzip
 import http.client
 import json
+import logging
 import os
 import urllib
-from datetime import datetime
 from typing import Any, Dict, List, Union
 
 import boto3
+from dateutil.parser import parse
 from errors import ParsingEventError
 from rules import default_rules
+
+
+class CustomFormatter(logging.Formatter):
+    def format(self, record):
+        original_msg = record.msg
+        if isinstance(original_msg, dict):
+            original_msg["Logger Name"] = record.name
+            formatted_msg = self.format_dict(original_msg, "")
+        else:
+            formatted_msg = original_msg
+
+        record.msg = f"{record.levelname} - {formatted_msg}"
+        return super().format(record)
+
+    def format_dict(self, data, indent):
+        lines = []
+        for key, value in data.items():
+            if isinstance(value, dict):
+                formatted_dict = self.format_dict(value, indent + "  ")
+                lines.append(f"{indent}{key}:\n{formatted_dict}")
+            else:
+                lines.append(f"{indent}{key}: {value}")
+        return "\n".join(lines)
+
+
+log_level = os.environ.get("LOG_LEVEL", "INFO")
+logger = logging.getLogger("main")
+logger.setLevel(logging.getLevelName(log_level))
+
+handler = logging.StreamHandler()
+formatter = CustomFormatter()
+handler.setFormatter(formatter)
+
+logger.addHandler(handler)
 
 
 # Slack web hook example
 # https://hooks.slack.com/services/XXXXXXX/XXXXXXX/XXXXXXXXXX
 def post_slack_message(hook_url: str, message: dict) -> int:
-    print(f"Sending message: {json.dumps(message)}")
+    logger.info("Sending message to slack: %s", json.dumps(message))
     headers = {"Content-type": "application/json"}
     connection = http.client.HTTPSConnection("hooks.slack.com")
     connection.request("POST",
@@ -39,7 +73,7 @@ def post_slack_message(hook_url: str, message: dict) -> int:
                        json.dumps(message),
                        headers)
     response = connection.getresponse()
-    print("Response: {}, message: {}".format(response.status, response.read().decode()))
+    logger.info("Slack response: status: %s, message: %s", response.status, response.read().decode())
     return response.status
 
 
@@ -78,8 +112,7 @@ def get_cloudtrail_log_records(event: Dict[str, List[Any]]) -> List[Dict[str, An
                 }
             )
         except Exception as e:
-            print(e)
-            print(f"Error getting object {key} from bucket {bucket}")
+            logger.exception("Error getting object: key: %s, bucket: %s, error: %s", key, bucket, e)
             raise e
     return records
 
@@ -101,6 +134,7 @@ def get_hook_url_for_account(
 
 
 def lambda_handler(event: Dict[str, List[Any]], __) -> int: # type: ignore # noqa: ANN001, PGH003
+    logger.debug("Event: %s", json.dumps(event))
     default_hook_url = read_env_variable_or_die("HOOK_URL")
     rules_separator = os.environ.get("RULES_SEPARATOR", ",")
     user_rules = parse_rules_from_string(os.environ.get("RULES", ""), rules_separator)
@@ -119,16 +153,26 @@ def lambda_handler(event: Dict[str, List[Any]], __) -> int: # type: ignore # noq
         rules.append(f'"eventName" in event and event["eventName"] in {json.dumps(events_list)}')
     if not rules:
         raise Exception("Have no rules to apply! Check configuration - add some, or enable default.")
-    print(f"Match rules:\n{rules}\nIgnore rules:\n{ignore_rules}")
+
+    for s3_record in event["Records"]:
+        if s3_record["eventName"].startswith("ObjectRemoved"):
+            logger.info("s3:ObjectRemoved event: %s", json.dumps(s3_record))
+            hook_url = get_hook_url_for_account(s3_record, configuration_as_json, default_hook_url)
+            message = event_to_slack_message(s3_record, s3_record["s3"]["object"]["key"])
+            post_slack_message(hook_url, message)
+            return 200
 
     records = get_cloudtrail_log_records(event)
     for record in records:
-        if "s3:ObjectRemoved" in record["eventName"]:
-            # TODO: Handle deletion
-            continue
         for log_event in record["events"]:
             hook_url = get_hook_url_for_account(log_event, configuration_as_json, default_hook_url)
-            handle_event(log_event, record["key"], rules, ignore_rules, hook_url)
+            handle_event(
+                event = log_event,
+                source_file = record["key"],
+                rules = rules,
+                ignore_rules = ignore_rules,
+                hook_url = hook_url
+            )
 
     return 200
 
@@ -138,26 +182,25 @@ def should_message_be_processed(event: Dict, rules: List[str], ignore_rules: Lis
     flat_event = flatten_json(event)
     user = event["userIdentity"]
     event_name = event["eventName"]
+    logger.debug("Rules: %s \n ignore_rules: %s", rules, ignore_rules)
+    logger.debug("Flat event: %s", json.dumps(flat_event))
     for rule in ignore_rules:
         try:
             if eval(rule, {}, {"event": flat_event}) is True: # noqa: PGH001
-                print("Event matched ignore rule and will not be processed.\n"
-                      f"Rule: {rule}\nEvent: {flat_event}")
+                logger.info({"Event matched ignore rule and will not be processed": {"rule": rule, "flat_event": flat_event}}) # noqa: E501
                 return False  # do not process event
         except ParsingEventError as e:
-            print(f"Event parsing failed: {e}.\n"
-                  f"Rule: {rule}\nEvent: {event}\nFlat event: {flat_event}")
+            logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}}) # noqa: E501
             continue
     for rule in rules:
         try:
             if eval(rule, {}, {"event": flat_event}) is True: # noqa: PGH001
-                print(f"Event matched rule and will be processed.\nRule:{rule}\nEvent: {flat_event}")
+                logger.info({"Event matched rule and will  be processed": {"rule": rule, "flat_event": flat_event}}) # noqa: E501
                 return True  # do send notification about event
         except ParsingEventError as e:
-            print(f"Event parsing failed: {e}.\n"
-                  f"Rule: {rule}\nEvent: {event}\nFlat event: {flat_event}")
+            logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}}) # noqa: E501
             continue
-    print(f"did not match any rules: event {event_name} called by {user}")
+    logger.info({"Event did not match any rules and will not be processed": {"event": event_name, "user": user}}) # noqa: E501
     return False
 
 
@@ -174,7 +217,7 @@ def handle_event(
     # log full event if it is AccessDenied
     if ("errorCode" in event and "AccessDenied" in event["errorCode"]):
         event_as_string = json.dumps(event, indent=4)
-        print(f"errorCode == AccessDenied; log full event: {event_as_string}")
+        logger.info("errorCode == AccessDenied; log full event: %s", event_as_string)
     message = event_to_slack_message(event, source_file)
     response = post_slack_message(hook_url, message)
     if response != 200: # noqa: PLR2004 TODO
@@ -216,8 +259,8 @@ def event_to_slack_message(event: Dict, source_file) -> Dict[str, Any]: # noqa: 
     request_parameters = event.get("requestParameters")
     response_elements = event.get("responseElements")
     additional_details = event.get("additionalEventData")
-    event_time = datetime.strptime(event["eventTime"], "%Y-%m-%dT%H:%M:%SZ")
-    event_id = event["eventID"]
+    event_time = parse(event["eventTime"])
+    event_id = event.get("eventID", "N/A")
     actor = event["userIdentity"]["arn"] if "arn" in event["userIdentity"] else event["userIdentity"]
     account_id = get_account_id_from_event(event)
     title = f"*{actor}* called *{event_name}*"

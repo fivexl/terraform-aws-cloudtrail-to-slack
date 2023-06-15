@@ -96,3 +96,14 @@ variable "rules_separator" {
   type        = string
 }
 
+variable "log_level" {
+  description = "Log level for lambda function"
+  default     = "INFO"
+  type        = string
+}
+
+variable "s3_ObjectRemoved_notification" {
+  description = "If object was removed from cloudtrail bucket, send notification to slack"
+  default     = true
+  type        = bool
+}

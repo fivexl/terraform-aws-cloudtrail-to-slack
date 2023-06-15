@@ -21,6 +21,7 @@ module "lambda" {
       IGNORE_RULES    = var.ignore_rules
       EVENTS_TO_TRACK = var.events_to_track
       CONFIGURATION   = var.configuration != null ? jsonencode(var.configuration) : ""
+      LOG_LEVEL       = var.log_level
     },
     var.use_default_rules ? { USE_DEFAULT_RULES = "True" } : {}
   )
@@ -93,7 +94,7 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
 
   lambda_function {
     lambda_function_arn = module.lambda.lambda_function_arn
-    events              = ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"]
+    events              = var.s3_ObjectRemoved_notification ? ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"] : ["s3:ObjectCreated:*"]
     filter_prefix       = "AWSLogs/"
     filter_suffix       = ".json.gz"
   }
