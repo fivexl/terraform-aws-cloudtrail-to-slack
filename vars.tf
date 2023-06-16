@@ -102,7 +102,7 @@ variable "log_level" {
   type        = string
 }
 
-variable "s3_ObjectRemoved_notification" {
+variable "s3_removed_object_notification" {
   description = "If object was removed from cloudtrail bucket, send notification to slack"
   default     = true
   type        = bool
