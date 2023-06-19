@@ -20,7 +20,7 @@ import json
 import logging
 import os
 import urllib
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List
 
 import boto3
 from dateutil.parser import parse
@@ -29,7 +29,7 @@ from rules import default_rules
 
 
 class CustomFormatter(logging.Formatter):
-    def format(self, record):
+    def format(self, record):  # noqa: ANN001, ANN101, ANN201
         original_msg = record.msg
         if isinstance(original_msg, dict):
             original_msg["Logger Name"] = record.name
@@ -40,7 +40,7 @@ class CustomFormatter(logging.Formatter):
         record.msg = f"{record.levelname} - {formatted_msg}"
         return super().format(record)
 
-    def format_dict(self, data, indent):
+    def format_dict(self, data, indent): # noqa: ANN001, ANN101, ANN201
         lines = []
         for key, value in data.items():
             if isinstance(value, dict):
@@ -85,36 +85,32 @@ def read_env_variable_or_die(env_var_name: str) -> str:
     return value
 
 
-def get_cloudtrail_log_records(event: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
+def get_cloudtrail_log_records(record: Dict) -> Dict | None:
     # Get all the files from S3 so we can process them
-    records = []
-
     s3 = boto3.client("s3")
-    for record in event["Records"]:
-        # In case if we get something unexpected
-        if "s3" not in record:
-            raise AssertionError(f"recieved record does not contain s3 section: {record}")
-        bucket = record["s3"]["bucket"]["name"]
-        key = urllib.parse.unquote_plus(record["s3"]["object"]["key"], encoding="utf-8")
-        # Do not process digest files
-        if "Digest" in key:
-            continue
-        try:
-            response = s3.get_object(Bucket=bucket, Key=key)
-            with gzip.GzipFile(fileobj=response["Body"]) as gzipfile:
-                content = gzipfile.read()
-            content_as_json = json.loads(content.decode("utf8"))
-            records.append(
-                {
-                    "key": key,
-                    "events": content_as_json["Records"],
-                    "eventName": record["eventName"]
-                }
-            )
-        except Exception as e:
-            logger.exception("Error getting object: key: %s, bucket: %s, error: %s", key, bucket, e)
-            raise e
-    return records
+
+    # In case if we get something unexpected
+    if "s3" not in record:
+        raise AssertionError(f"recieved record does not contain s3 section: {record}")
+    bucket = record["s3"]["bucket"]["name"]
+    key = urllib.parse.unquote_plus(record["s3"]["object"]["key"], encoding="utf-8") # type: ignore # noqa: PGH003, E501
+    # Do not process digest files
+    if "Digest" in key:
+        return
+    try:
+        response = s3.get_object(Bucket=bucket, Key=key)
+        with gzip.GzipFile(fileobj=response["Body"]) as gzipfile:
+            content = gzipfile.read()
+        content_as_json = json.loads(content.decode("utf8"))
+        cloudtrail_log_record = {
+            "key": key,
+            "events": content_as_json["Records"],
+        }
+
+    except Exception as e:
+        logger.exception("Error getting object: key: %s, bucket: %s, error: %s", key, bucket, e)
+        raise e
+    return cloudtrail_log_record
 
 
 def get_account_id_from_event(event: dict) -> str:
@@ -123,7 +119,7 @@ def get_account_id_from_event(event: dict) -> str:
 
 def get_hook_url_for_account(
         event: dict,
-        configuration: List[Dict[str, Union[List[str], str]]],
+        configuration: List[Dict],
         default_hook_url: str
 ) -> str:
     accoun_id = get_account_id_from_event(event)
@@ -133,12 +129,49 @@ def get_hook_url_for_account(
     return default_hook_url
 
 
-def lambda_handler(event: Dict[str, List[Any]], __) -> int: # type: ignore # noqa: ANN001, PGH003
-    logger.debug("Event: %s", json.dumps(event))
+def handle_removed_object_event(
+        record: dict,
+        hook_url: str,
+        configuration_as_json: List[Dict],
+        default_hook_url: str
+) -> None:
+    logger.info("s3:ObjectRemoved event: %s", json.dumps(record))
+    hook_url = get_hook_url_for_account(record, configuration_as_json, default_hook_url)
+    message = event_to_slack_message(record, record["s3"]["object"]["key"])
+    post_slack_message(hook_url, message)
+
+
+def handle_created_object_event(  # noqa: PLR0913
+        record: dict,
+        hook_url: str,
+        configuration_as_json: List[Dict],
+        default_hook_url: str,
+        rules: List[str],
+        ignore_rules: List[str]
+) -> None:
+    cloudtrail_log_record = get_cloudtrail_log_records(record)
+    if cloudtrail_log_record:
+        for cloudtrail_log_event in cloudtrail_log_record["events"]:
+            hook_url = get_hook_url_for_account(
+                event = cloudtrail_log_event,
+                configuration = configuration_as_json,
+                default_hook_url = default_hook_url
+            )
+            handle_event(
+                event = cloudtrail_log_event,
+                source_file = cloudtrail_log_record["key"],
+                rules = rules,
+                ignore_rules = ignore_rules,
+                hook_url = hook_url
+            )
+
+
+def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # noqa: ANN001
+    logger.debug("s3_notification_event: %s", json.dumps(s3_notification_event))
     default_hook_url = read_env_variable_or_die("HOOK_URL")
     rules_separator = os.environ.get("RULES_SEPARATOR", ",")
-    user_rules = parse_rules_from_string(os.environ.get("RULES", ""), rules_separator)
-    ignore_rules = parse_rules_from_string(os.environ.get("IGNORE_RULES", ""), rules_separator)
+    user_rules: List[str] | None  = parse_rules_from_string(os.environ.get("RULES"), rules_separator)
+    ignore_rules: List[str] | None = parse_rules_from_string(os.environ.get("IGNORE_RULES"), rules_separator)
     use_default_rules = os.environ.get("USE_DEFAULT_RULES")
     events_to_track = os.environ.get("EVENTS_TO_TRACK")
     configuration = os.environ.get("CONFIGURATION")
@@ -154,26 +187,29 @@ def lambda_handler(event: Dict[str, List[Any]], __) -> int: # type: ignore # noq
     if not rules:
         raise Exception("Have no rules to apply! Check configuration - add some, or enable default.")
 
-    for s3_record in event["Records"]:
-        if s3_record["eventName"].startswith("ObjectRemoved"):
-            logger.info("s3:ObjectRemoved event: %s", json.dumps(s3_record))
-            hook_url = get_hook_url_for_account(s3_record, configuration_as_json, default_hook_url)
-            message = event_to_slack_message(s3_record, s3_record["s3"]["object"]["key"])
-            post_slack_message(hook_url, message)
-            return 200
 
-    records = get_cloudtrail_log_records(event)
-    for record in records:
-        for log_event in record["events"]:
-            hook_url = get_hook_url_for_account(log_event, configuration_as_json, default_hook_url)
-            handle_event(
-                event = log_event,
-                source_file = record["key"],
-                rules = rules,
-                ignore_rules = ignore_rules,
-                hook_url = hook_url
+    for record in s3_notification_event["Records"]:
+        event_name: str = record["eventName"]
+
+        if event_name.startswith("ObjectRemoved"):
+            handle_removed_object_event(
+                record = record,
+                hook_url = default_hook_url,
+                configuration_as_json = configuration_as_json,
+                default_hook_url = default_hook_url
             )
+            continue
 
+        elif event_name.startswith("ObjectCreated"):
+            handle_created_object_event(
+                record = record,
+                hook_url = default_hook_url,
+                configuration_as_json = configuration_as_json,
+                default_hook_url = default_hook_url,
+                rules = rules,
+                ignore_rules = ignore_rules
+            )
+            continue
     return 200
 
 
@@ -198,7 +234,7 @@ def should_message_be_processed(event: Dict, rules: List[str], ignore_rules: Lis
                 logger.info({"Event matched rule and will  be processed": {"rule": rule, "flat_event": flat_event}}) # noqa: E501
                 return True  # do send notification about event
         except ParsingEventError as e:
-            logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}}) # noqa: E501
+            logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}})
             continue
     logger.info({"Event did not match any rules and will not be processed": {"event": event_name, "user": user}}) # noqa: E501
     return False
@@ -245,7 +281,9 @@ def flatten_json(y: dict) -> dict:
 
 
 # Parse rules from string
-def parse_rules_from_string(rules_as_string: str, rules_separator: str) -> List[str]:
+def parse_rules_from_string(rules_as_string: str | None, rules_separator: str) -> List[str]:
+    if not rules_as_string:
+        return []
     rules_as_list = rules_as_string.split(rules_separator)
     # make sure there are no empty strings in the list
     return [x for x in rules_as_list if x]
