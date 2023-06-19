@@ -62,6 +62,97 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
+
+def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # noqa: ANN001
+    cfg = Config()
+
+    for record in s3_notification_event["Records"]:
+        event_name: str = record["eventName"]
+
+        if event_name.startswith("ObjectRemoved"):
+            handle_removed_object_event(
+                record = record,
+                cfg = cfg,
+            )
+            continue
+
+        elif event_name.startswith("ObjectCreated"):
+            handle_created_object_event(
+                record = record,
+                cfg = cfg,
+            )
+            continue
+    return 200
+
+
+class Config:
+    def __init__(self): # noqa: ANN101 ANN204
+        self.default_hook_url: str = self.read_env_variable_or_die("HOOK_URL")
+        self.rules_separator: str = os.environ.get("RULES_SEPARATOR", ",")
+        self.user_rules: List[str] = self.parse_rules_from_string(os.environ.get("RULES"), self.rules_separator) # noqa: E501
+        self.ignore_rules: List[str] = self.parse_rules_from_string(os.environ.get("IGNORE_RULES"), self.rules_separator) # noqa: E501
+        self.use_default_rules: bool = os.environ.get("USE_DEFAULT_RULES") # type: ignore # noqa: PGH003
+        self.events_to_track: str | None = os.environ.get("EVENTS_TO_TRACK")
+        self.configuration: str | None = os.environ.get("CONFIGURATION")
+        self.configuration_as_json: List[Dict]  = json.loads(self.configuration) if self.configuration else []
+        self.rules = []
+        if self.use_default_rules:
+            self.rules += default_rules
+        if self.user_rules:
+            self.rules += self.user_rules
+        if self.events_to_track:
+            events_list = self.events_to_track.replace(" ", "").split(",")
+            self.rules.append(f'"eventName" in event and event["eventName"] in {json.dumps(events_list)}')
+        if not self.rules:
+            raise Exception("Have no rules to apply! Check configuration - add some, or enable default.")
+
+    @staticmethod
+    def read_env_variable_or_die(var_name: str) -> str:
+        var_value = os.environ.get(var_name)
+        if var_value is None:
+            raise Exception(f"Environment variable {var_name} is not set")
+        return var_value
+
+    @staticmethod
+    def parse_rules_from_string(rules_as_string: str | None, rules_separator: str) -> List[str]:
+        if not rules_as_string:
+            return []
+        rules_as_list = rules_as_string.split(rules_separator)
+        # make sure there are no empty strings in the list
+        return [x for x in rules_as_list if x]
+
+
+def handle_removed_object_event(
+        record: dict,
+        cfg: Config,
+) -> None:
+    logger.info("s3:ObjectRemoved event: %s", json.dumps(record))
+    hook_url = get_hook_url_for_account(record, cfg.configuration_as_json, cfg.default_hook_url)
+    message = event_to_slack_message(record, record["s3"]["object"]["key"])
+    post_slack_message(hook_url, message)
+
+
+def handle_created_object_event(
+        record: dict,
+        cfg: Config,
+) -> None:
+    cloudtrail_log_record = get_cloudtrail_log_records(record)
+    if cloudtrail_log_record:
+        for cloudtrail_log_event in cloudtrail_log_record["events"]:
+            hook_url = get_hook_url_for_account(
+                event = cloudtrail_log_event,
+                configuration = cfg.configuration_as_json,
+                default_hook_url = cfg.default_hook_url
+            )
+            handle_event(
+                event = cloudtrail_log_event,
+                source_file = cloudtrail_log_record["key"],
+                rules = cfg.rules,
+                ignore_rules = cfg.ignore_rules,
+                hook_url = hook_url
+            )
+
+
 # Slack web hook example
 # https://hooks.slack.com/services/XXXXXXX/XXXXXXX/XXXXXXXXXX
 def post_slack_message(hook_url: str, message: dict) -> int:
@@ -75,14 +166,6 @@ def post_slack_message(hook_url: str, message: dict) -> int:
     response = connection.getresponse()
     logger.info("Slack response: status: %s, message: %s", response.status, response.read().decode())
     return response.status
-
-
-def read_env_variable_or_die(env_var_name: str) -> str:
-    value = os.environ.get(env_var_name)
-    if value is None:
-        message = f"Required env variable {env_var_name} is not defined."
-        raise EnvironmentError(message)
-    return value
 
 
 def get_cloudtrail_log_records(record: Dict) -> Dict | None:
@@ -129,90 +212,6 @@ def get_hook_url_for_account(
     return default_hook_url
 
 
-def handle_removed_object_event(
-        record: dict,
-        hook_url: str,
-        configuration_as_json: List[Dict],
-        default_hook_url: str
-) -> None:
-    logger.info("s3:ObjectRemoved event: %s", json.dumps(record))
-    hook_url = get_hook_url_for_account(record, configuration_as_json, default_hook_url)
-    message = event_to_slack_message(record, record["s3"]["object"]["key"])
-    post_slack_message(hook_url, message)
-
-
-def handle_created_object_event(  # noqa: PLR0913
-        record: dict,
-        hook_url: str,
-        configuration_as_json: List[Dict],
-        default_hook_url: str,
-        rules: List[str],
-        ignore_rules: List[str]
-) -> None:
-    cloudtrail_log_record = get_cloudtrail_log_records(record)
-    if cloudtrail_log_record:
-        for cloudtrail_log_event in cloudtrail_log_record["events"]:
-            hook_url = get_hook_url_for_account(
-                event = cloudtrail_log_event,
-                configuration = configuration_as_json,
-                default_hook_url = default_hook_url
-            )
-            handle_event(
-                event = cloudtrail_log_event,
-                source_file = cloudtrail_log_record["key"],
-                rules = rules,
-                ignore_rules = ignore_rules,
-                hook_url = hook_url
-            )
-
-
-def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # noqa: ANN001
-    logger.debug("s3_notification_event: %s", json.dumps(s3_notification_event))
-    default_hook_url = read_env_variable_or_die("HOOK_URL")
-    rules_separator = os.environ.get("RULES_SEPARATOR", ",")
-    user_rules: List[str] | None  = parse_rules_from_string(os.environ.get("RULES"), rules_separator)
-    ignore_rules: List[str] | None = parse_rules_from_string(os.environ.get("IGNORE_RULES"), rules_separator)
-    use_default_rules = os.environ.get("USE_DEFAULT_RULES")
-    events_to_track = os.environ.get("EVENTS_TO_TRACK")
-    configuration = os.environ.get("CONFIGURATION")
-    configuration_as_json = json.loads(configuration) if configuration else []
-    rules = []
-    if use_default_rules:
-        rules += default_rules
-    if user_rules:
-        rules += user_rules
-    if events_to_track:
-        events_list = events_to_track.replace(" ", "").split(",")
-        rules.append(f'"eventName" in event and event["eventName"] in {json.dumps(events_list)}')
-    if not rules:
-        raise Exception("Have no rules to apply! Check configuration - add some, or enable default.")
-
-
-    for record in s3_notification_event["Records"]:
-        event_name: str = record["eventName"]
-
-        if event_name.startswith("ObjectRemoved"):
-            handle_removed_object_event(
-                record = record,
-                hook_url = default_hook_url,
-                configuration_as_json = configuration_as_json,
-                default_hook_url = default_hook_url
-            )
-            continue
-
-        elif event_name.startswith("ObjectCreated"):
-            handle_created_object_event(
-                record = record,
-                hook_url = default_hook_url,
-                configuration_as_json = configuration_as_json,
-                default_hook_url = default_hook_url,
-                rules = rules,
-                ignore_rules = ignore_rules
-            )
-            continue
-    return 200
-
-
 # Filter out events
 def should_message_be_processed(event: Dict, rules: List[str], ignore_rules: List[str]) -> bool:
     flat_event = flatten_json(event)
@@ -243,7 +242,7 @@ def should_message_be_processed(event: Dict, rules: List[str], ignore_rules: Lis
 # Handle events
 def handle_event(
     event: dict,
-    source_file, # noqa: ANN001 TODO: type
+    source_file: str,
     rules: List[str],
     ignore_rules: List[str],
     hook_url: str
@@ -278,15 +277,6 @@ def flatten_json(y: dict) -> dict:
 
     flatten(y)
     return out
-
-
-# Parse rules from string
-def parse_rules_from_string(rules_as_string: str | None, rules_separator: str) -> List[str]:
-    if not rules_as_string:
-        return []
-    rules_as_list = rules_as_string.split(rules_separator)
-    # make sure there are no empty strings in the list
-    return [x for x in rules_as_list if x]
 
 
 # Format message
@@ -391,7 +381,9 @@ def event_to_slack_message(event: Dict, source_file) -> Dict[str, Any]: # noqa: 
 
 # For local testing
 if __name__ == "__main__":
-    hook_url = read_env_variable_or_die("HOOK_URL")
+    hook_url = os.environ.get("HOOK_URL")
+    if hook_url is None:
+        raise Exception("HOOK_URL is not set!")
     ignore_rules = ["'userIdentity.accountId' in event and event['userIdentity.accountId'] == 'YYYYYYYYYYY'"]
     with open("./test/events.json") as f:
         data = json.load(f)
