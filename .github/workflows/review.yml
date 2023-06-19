@@ -17,4 +17,4 @@ jobs:
     - name: Update review branch
       id: update-review
       run: |
-        git push origin main:review
+        git push origin master:review
