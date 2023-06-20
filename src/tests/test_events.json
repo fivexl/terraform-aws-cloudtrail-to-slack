@@ -1,0 +1,272 @@
+{
+    "test_events": [
+        {
+            "test_event_name": "console_login_without_MFA_and_SSO",
+            "event": {
+                "eventVersion": "1.05",
+                "userIdentity": {
+                    "type": "IAMUser",
+                    "principalId": "XXXXXXXXXXX",
+                    "arn": "arn:aws:iam::XXXXXXXXXXX:user/xxxxxxxx",
+                    "accountId": "XXXXXXXXXXX",
+                    "userName": "xxxxxxxx"
+                },
+                "eventTime": "2019-07-03T16:14:51Z",
+                "eventSource": "signin.amazonaws.com",
+                "eventName": "ConsoleLogin",
+                "awsRegion": "us-east-1",
+                "sourceIPAddress": "83.41.208.104",
+                "userAgent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0",
+                "requestParameters": "null",
+                "responseElements": {
+                    "ConsoleLogin": "Success"
+                },
+                "additionalEventData": {
+                    "LoginTo": "https://console.aws.amazon.com/ec2/v2/home?XXXXXXXXXXX",
+                    "MobileVersion": "No",
+                    "MFAUsed": "No"
+                },
+                "eventID": "0e4d136e-25d4-4d92-b2b2-8a9fe1e3f1af",
+                "eventType": "AwsConsoleSignIn",
+                "recipientAccountId": "XXXXXXXXXXX"
+            }
+        },
+        {
+            "test_event_name": "cloudtrail_stop_logging",
+            "event": {
+                "eventVersion": "1.09",
+                "userIdentity": {
+                    "type": "AssumedRole",
+                    "principalId": "XXXXXXXXXXXXXXXXXXXXXX",
+                    "arn": "arn:aws:sts::XXXXXXXXXXX",
+                    "accountId": "XXXXXXXXXXX",
+                    "accessKeyId": "XXXXXXXXXXX",
+                    "sessionContext": {
+                        "sessionIssuer": {
+                            "type": "Role",
+                            "principalId": "XXXXXXXXXXX",
+                            "arn": "XXXXXXXXXXX",
+                            "accountId": "XXXXXXXXXXX",
+                            "userName": "XXXXXXXXXXX"
+                        }
+                    }
+                },
+                "eventTime": "2023-06-13T11:03:44Z",
+                "eventSource": "cloudtrail.amazonaws.com",
+                "eventName": "StopLogging",
+                "awsRegion": "eu-central-1",
+                "sourceIPAddress": "XXXXXXXXXXX",
+                "userAgent": "AWS Internal",
+                "requestParameters": {
+                    "name": "XXXXXXXXXXX"
+                },
+                "responseElements": "null",
+                "requestID": "XXXXXXXXXXX",
+                "eventID": "XXXXXXXXXXX",
+                "readOnly": "false",
+                "eventType": "AwsApiCall",
+                "managementEvent": "true",
+                "recipientAccountId": "XXXXXXXXXXX",
+                "eventCategory": "Management",
+                "sessionCredentialFromConsole": "true"
+            }
+        },
+        {
+            "test_event_name": "cloudtrail_update_trail",
+            "event": {
+                "eventVersion": "1.09",
+                "userIdentity": {
+                    "type": "AssumedRole",
+                    "principalId": "XXXXXXXXXXX",
+                    "arn": "XXXXXXXXXXX",
+                    "accountId": "XXXXXXXXXXX",
+                    "accessKeyId": "XXXXXXXXXXX",
+                    "sessionContext": {
+                        "sessionIssuer": {
+                            "type": "Role",
+                            "principalId": "XXXXXXXXXXX",
+                            "arn": "XXXXXXXXXXX",
+                            "accountId": "XXXXXXXXXXX",
+                            "userName": "XXXXXXXXXXX"
+                        }
+                    }
+                },
+                "eventTime": "2023-06-13T11:04:48Z",
+                "eventSource": "cloudtrail.amazonaws.com",
+                "eventName": "UpdateTrail",
+                "awsRegion": "XXXXXXXXXXX",
+                "sourceIPAddress": "XXXXXXXXXXX",
+                "userAgent": "AWS Internal",
+                "requestParameters": {},
+                "responseElements": {},
+                "requestID": "XXXXXXXXXXX",
+                "eventID": "XXXXXXXXXXX",
+                "readOnly": "false",
+                "eventType": "AwsApiCall",
+                "managementEvent": "true",
+                "recipientAccountId": "XXXXXXXXXXX",
+                "eventCategory": "Management"
+            }
+        },
+        {
+            "test_event_name": "cloudtrail_delete_trail",
+            "event": {
+                "eventVersion": "1.09",
+                "userIdentity": {
+                    "type": "AssumedRole",
+                    "principalId": "XXXXXXXXXXX",
+                    "arn": "XXXXXXXXXXX",
+                    "accountId": "XXXXXXXXXXX",
+                    "accessKeyId": "XXXXXXXXXXX",
+                    "sessionContext": {
+                        "sessionIssuer": {
+                            "type": "Role",
+                            "principalId": "XXXXXXXXXXX",
+                            "arn": "XXXXXXXXXXX",
+                            "accountId": "XXXXXXXXXXX",
+                            "userName": "XXXXXXXXXXX"
+                        }
+                    }
+                },
+                "eventTime": "2023-06-13T11:04:59Z",
+                "eventSource": "cloudtrail.amazonaws.com",
+                "eventName": "DeleteTrail",
+                "awsRegion": "XXXXXXXXXXX",
+                "sourceIPAddress": "XXXXXXXXXXX",
+                "userAgent": "AWS Internal",
+                "requestParameters": {
+                    "name": "XXXXXXXXXXX"
+                },
+                "responseElements": "null",
+                "requestID": "XXXXXXXXXXX",
+                "eventID": "XXXXXXXXXXX",
+                "readOnly": "false",
+                "eventType": "AwsApiCall",
+                "managementEvent": "true",
+                "recipientAccountId": "XXXXXXXXXXX",
+                "eventCategory": "Management",
+                "sessionCredentialFromConsole": "true"
+            }
+        },
+        {
+            "test_event_name": "non_read_action_by_root",
+            "event": {
+                "eventVersion": "1.08",
+                "userIdentity": {
+                    "type": "Root",
+                    "principalId": "XXXXXXXXXXXXXXXXXXXX",
+                    "arn": "arn:aws:iam::XXXXXXXXXXXXXXXXXXXX:root",
+                    "accountId": "XXXXXXXXXXXXXXXXXXXX",
+                    "accessKeyId": ""
+                },
+                "eventTime": "XXXXXXXXXXXXXXXXXXXX",
+                "eventSource": "signin.amazonaws.com",
+                "eventName": "ConsoleLogin",
+                "awsRegion": "XXXXXXXXXXXXXXXXXXXX",
+                "sourceIPAddress": "XXXXXXXXXXXXXXXXXXXX",
+                "userAgent": "XXXXXXXXXXXXXXXXXXXX",
+                "requestParameters": "null",
+                "responseElements": {
+                    "ConsoleLogin": "Success"
+                },
+                "additionalEventData": {
+                    "LoginTo": "XXXXXXXXXXXXXXXXXXXX",
+                    "MobileVersion": "No",
+                    "MFAUsed": "Yes"
+                },
+                "eventID": "XXXXXXXXXXXXXXXXXXXX",
+                "readOnly": "false",
+                "eventType": "AwsConsoleSignIn",
+                "managementEvent": "true",
+                "recipientAccountId": "XXXXXXXXXXXXXXXXXXXX",
+                "eventCategory": "Management"
+            }
+        },
+        {
+            "test_event_name": "unauthorized_operation",
+            "event": {
+                "eventVersion": "1.08",
+                "userIdentity": {
+                    "type": "AssumedRole",
+                    "principalId": "XXXXXXXXXXXXX",
+                    "arn": "arn:aws:sts::XXXXXXXXXXXXX:assumed-role/XXXXXXXXXXXXX/XXXXXXXXXXXXX",
+                    "accountId": "XXXXXXXXXXXXX",
+                    "accessKeyId": "XXXXXXXXXXXXX",
+                    "sessionContext": {
+                        "sessionIssuer": {
+                            "type": "Role",
+                            "principalId": "XXXXXXXXXXXXX",
+                            "arn": "arn:aws:iam::XXXXXXXXXXXXX:role/aws-reserved/XXXXXXXXXXXXX/XXXXXXXXXXXXX/XXXXXXXXXXXXX",
+                            "accountId": "XXXXXXXXXXXXX",
+                            "userName": "XXXXXXXXXXXXX"
+                        }
+                    }
+                },
+                "eventTime": "2023-06-09T07:46:09Z",
+                "eventSource": "ec2.amazonaws.com",
+                "eventName": "DescribeInstances",
+                "awsRegion": "eu-central-1",
+                "sourceIPAddress": "XXXXXXXXXXXXX",
+                "userAgent": "XXXXXXXXXXXXX/ec2.describe-instances",
+                "errorCode": "Client.UnauthorizedOperation",
+                "errorMessage": "You are not authorized to perform this operation.",
+                "requestParameters": {
+                    "instancesSet": {},
+                    "filterSet": {}
+                },
+                "responseElements": "null",
+                "requestID": "XXXXXXXXXXXXX",
+                "eventID": "XXXXXXXXXXXXX",
+                "readOnly": "true",
+                "eventType": "AwsApiCall",
+                "managementEvent": "true",
+                "recipientAccountId": "XXXXXXXXXXXXX",
+                "eventCategory": "Management"
+            }
+        },
+        {
+            "test_event_name": "access_denied",
+            "event": {
+                "eventVersion": "1.08",
+                "userIdentity": {
+                    "type": "AssumedRole",
+                    "principalId": "XXXXXXXXXXXXXXXXXXXX",
+                    "arn": "arn:aws:sts::XXXXXXXXXXXXXX:assumed-role/XXXXXXXXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXX",
+                    "accountId": "YYYYYYYYYYYYYYYYY",
+                    "accessKeyId": "XXXXXXXXXXXXXXXXX",
+                    "sessionContext": {
+                        "sessionIssuer": {
+                            "type": "Role",
+                            "principalId": "XXXXXXXXXXXXXXXXXXXX",
+                            "arn": "arn:aws:iam::XXXXXXXXX:role/XXXXXXXXXXXXX",
+                            "accountId": "XXXXXXXXXXXXXXX",
+                            "userName": "XXXXXXXXXXXXXXXXXXX"
+                        },
+                        "attributes": {
+                            "creationDate": "XXXXXXXXXXXXX",
+                            "mfaAuthenticated": "false"
+                        }
+                    }
+                },
+                "eventTime": "XXXXXXXXXXXXX",
+                "eventSource": "health.amazonaws.com",
+                "eventName": "DescribeEventAggregates",
+                "awsRegion": "us-east-1",
+                "sourceIPAddress": "XXXXXXXXXXXXX",
+                "userAgent": "XXXXXXXXXXXXX",
+                "errorCode": "AccessDenied",
+                "errorMessage": "User: arn:aws:sts::XXXXXXXXXXXXX:assumed-role/XXXXXXXXXXXXX/XXXXXXXXXXXXX is not authorized to perform: health:DescribeEventAggregates on resource: * because no identity-based policy allows the health:DescribeEventAggregates action",
+                "requestParameters": "null",
+                "responseElements": "null",
+                "requestID": "XXXXXXXXXXXXX-0c20-4131-a6a7-XXXXXXXXXXXXX",
+                "eventID": "XXXXXXXXXXXXX-eab3-4bc7-ae06-XXXXXXXXXXXXX",
+                "readOnly": "true",
+                "eventType": "AwsApiCall",
+                "managementEvent": "true",
+                "recipientAccountId": "XXXXXXXXXXXXX",
+                "eventCategory": "Management",
+                "sessionCredentialFromConsole": "true"
+            }
+        } 
+    ]
+}

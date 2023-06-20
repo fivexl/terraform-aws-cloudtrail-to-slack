@@ -24,7 +24,6 @@ from typing import Any, Dict, List
 
 import boto3
 from dateutil.parser import parse
-from errors import ParsingEventError
 from rules import default_rules
 
 
@@ -224,7 +223,7 @@ def should_message_be_processed(event: Dict, rules: List[str], ignore_rules: Lis
             if eval(rule, {}, {"event": flat_event}) is True: # noqa: PGH001
                 logger.info({"Event matched ignore rule and will not be processed": {"rule": rule, "flat_event": flat_event}}) # noqa: E501
                 return False  # do not process event
-        except ParsingEventError as e:
+        except Exception as e:
             logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}}) # noqa: E501
             continue
     for rule in rules:
@@ -232,7 +231,7 @@ def should_message_be_processed(event: Dict, rules: List[str], ignore_rules: Lis
             if eval(rule, {}, {"event": flat_event}) is True: # noqa: PGH001
                 logger.info({"Event matched rule and will  be processed": {"rule": rule, "flat_event": flat_event}}) # noqa: E501
                 return True  # do send notification about event
-        except ParsingEventError as e:
+        except Exception as e:
             logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}})
             continue
     logger.info({"Event did not match any rules and will not be processed": {"event": event_name, "user": user}}) # noqa: E501
@@ -385,7 +384,7 @@ if __name__ == "__main__":
     if hook_url is None:
         raise Exception("HOOK_URL is not set!")
     ignore_rules = ["'userIdentity.accountId' in event and event['userIdentity.accountId'] == 'YYYYYYYYYYY'"]
-    with open("./test/events.json") as f:
+    with open("./tests/test_events.json") as f:
         data = json.load(f)
     for event in data:
         handle_event(event, "file_name", default_rules, ignore_rules, hook_url)
