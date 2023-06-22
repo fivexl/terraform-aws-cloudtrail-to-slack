@@ -113,3 +113,9 @@ variable "rule_evaluation_errors_to_slack" {
   default     = true
   type        = bool
 }
+
+variable "s3_notification_filter_prefix" {
+  description = "S3 notification filter prefix"
+  default     = "AWSLogs/"
+  type        = string
+}

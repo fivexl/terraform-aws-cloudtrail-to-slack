@@ -96,7 +96,7 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
   lambda_function {
     lambda_function_arn = module.lambda.lambda_function_arn
     events              = var.s3_removed_object_notification ? ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"] : ["s3:ObjectCreated:*"]
-    filter_prefix       = "AWSLogs/"
+    filter_prefix       = var.s3_notification_filter_prefix
     filter_suffix       = ".json.gz"
   }
 
