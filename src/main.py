@@ -34,22 +34,32 @@ logger = get_logger()
 
 def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # noqa: ANN001
 
-    for record in s3_notification_event["Records"]:
-        event_name: str = record["eventName"]
+    try:
+        for record in s3_notification_event["Records"]:
+            event_name: str = record["eventName"]
+            if "Digest" not in record["s3"]["object"]["key"]:
+                logger.debug({"s3_notification_event": s3_notification_event})
 
-        if event_name.startswith("ObjectRemoved"):
-            handle_removed_object_event(
-                record = record,
-                cfg = cfg,
-            )
-            continue
+            if event_name.startswith("ObjectRemoved"):
+                handle_removed_object_event(
+                    record = record,
+                    cfg = cfg,
+                )
+                continue
 
-        elif event_name.startswith("ObjectCreated"):
-            handle_created_object_event(
-                record = record,
-                cfg = cfg,
-            )
-            continue
+            elif event_name.startswith("ObjectCreated"):
+                handle_created_object_event(
+                    record = record,
+                    cfg = cfg,
+                )
+                continue
+
+    except Exception as e:
+        post_slack_message(
+            hook_url= cfg.default_hook_url,
+            message= message_for_slack_error_notification(e, s3_notification_event)
+        )
+        logger.exception({"Failed to process event": e})
     return 200
 
 
@@ -57,7 +67,7 @@ def handle_removed_object_event(
         record: dict,
         cfg: Config,
 ) -> None:
-    logger.info("s3:ObjectRemoved event: %s", json.dumps(record))
+    logger.info({"s3:ObjectRemoved event": record})
     hook_url = get_hook_url_for_account(record, cfg.configuration_as_json, cfg.default_hook_url)
     message = event_to_slack_message(record, record["s3"]["object"]["key"])
     post_slack_message(hook_url, message)
@@ -77,7 +87,7 @@ def handle_created_object_event(
             )
             handle_event(
                 event = cloudtrail_log_event,
-                source_file = cloudtrail_log_record["key"],
+                source_file_object_key = cloudtrail_log_record["key"],
                 rules = cfg.rules,
                 ignore_rules = cfg.ignore_rules,
                 hook_url = hook_url
@@ -87,7 +97,7 @@ def handle_created_object_event(
 # Slack web hook example
 # https://hooks.slack.com/services/XXXXXXX/XXXXXXX/XXXXXXXXXX
 def post_slack_message(hook_url: str, message: dict) -> int:
-    logger.info("Sending message to slack: %s", json.dumps(message))
+    logger.info({"Sending message to slack": message})
     headers = {"Content-type": "application/json"}
     connection = http.client.HTTPSConnection("hooks.slack.com")
     connection.request("POST",
@@ -95,7 +105,7 @@ def post_slack_message(hook_url: str, message: dict) -> int:
                        json.dumps(message),
                        headers)
     response = connection.getresponse()
-    logger.info("Slack response: status: %s, message: %s", response.status, response.read().decode())
+    logger.info({"Slack response": {"status": response.status, "message": response.read().decode()}})
     return response.status
 
 
@@ -122,7 +132,7 @@ def get_cloudtrail_log_records(record: Dict) -> Dict | None:
         }
 
     except Exception as e:
-        logger.exception("Error getting object: key: %s, bucket: %s, error: %s", key, bucket, e)
+        logger.exception({"Error getting object": {"key": key, "bucket": bucket, "error": e}})
         raise e
     return cloudtrail_log_record
 
@@ -144,20 +154,35 @@ def get_hook_url_for_account(
 
 
 # Filter out events
-def should_message_be_processed(event: Dict, rules: List[str], ignore_rules: List[str]) -> bool:
+def should_message_be_processed(
+    event: Dict,
+    rules: List[str],
+    ignore_rules: List[str],
+    source_file_object_key: str
+) -> bool:
     flat_event = flatten_json(event)
     user = event["userIdentity"]
     event_name = event["eventName"]
-    logger.debug("Rules: %s \n ignore_rules: %s", rules, ignore_rules)
-    logger.debug("Flat event: %s", json.dumps(flat_event))
-    for rule in ignore_rules:
+    logger.debug({"Rules:": rules, "ignore_rules": ignore_rules})
+    logger.debug({"Flattened event": flat_event})
+
+    for ignore_rule in ignore_rules:
         try:
-            if eval(rule, {}, {"event": flat_event}) is True: # noqa: PGH001
-                logger.info({"Event matched ignore rule and will not be processed": {"rule": rule, "flat_event": flat_event}}) # noqa: E501
+            if eval(ignore_rule, {}, {"event": flat_event}) is True: # noqa: PGH001
+                logger.info({"Event matched ignore rule and will not be processed": {"ignore_rule": ignore_rule, "flat_event": flat_event}}) # noqa: E501
                 return False  # do not process event
         except Exception as e:
-            logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}}) # noqa: E501
+            logger.exception({"Event parsing failed": {"error": e, "ignore_rule": ignore_rule, "flat_event": flat_event}}) # noqa: E501
+            post_slack_message(
+                hook_url = get_hook_url_for_account(event, cfg.configuration_as_json, cfg.default_hook_url),
+                message = message_for_rule_evaluation_error_notification(
+                error = e,
+                object_key = source_file_object_key,
+                rule = ignore_rule,
+                )
+            )
             continue
+
     for rule in rules:
         try:
             if eval(rule, {}, {"event": flat_event}) is True: # noqa: PGH001
@@ -165,7 +190,16 @@ def should_message_be_processed(event: Dict, rules: List[str], ignore_rules: Lis
                 return True  # do send notification about event
         except Exception as e:
             logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}})
+            post_slack_message(
+                hook_url = get_hook_url_for_account(event, cfg.configuration_as_json, cfg.default_hook_url),
+                message = message_for_rule_evaluation_error_notification(
+                error = e,
+                object_key = source_file_object_key,
+                rule = rule,
+                )
+            )
             continue
+
     logger.info({"Event did not match any rules and will not be processed": {"event": event_name, "user": user}}) # noqa: E501
     return False
 
@@ -173,18 +207,18 @@ def should_message_be_processed(event: Dict, rules: List[str], ignore_rules: Lis
 # Handle events
 def handle_event(
     event: dict,
-    source_file: str,
+    source_file_object_key: str,
     rules: List[str],
     ignore_rules: List[str],
     hook_url: str
 ) -> None:
-    if should_message_be_processed(event, rules, ignore_rules) is not True:
+    if should_message_be_processed(event, rules, ignore_rules, source_file_object_key) is not True:
         return
     # log full event if it is AccessDenied
     if ("errorCode" in event and "AccessDenied" in event["errorCode"]):
         event_as_string = json.dumps(event, indent=4)
-        logger.info("errorCode == AccessDenied; log full event: %s", event_as_string)
-    message = event_to_slack_message(event, source_file)
+        logger.info({"errorCode": "AccessDenied", "log full event": event_as_string})
+    message = event_to_slack_message(event, source_file_object_key)
     response = post_slack_message(hook_url, message)
     if response != 200: # noqa: PLR2004 TODO
         raise Exception("Failed to send message to Slack!")
@@ -310,8 +344,111 @@ def event_to_slack_message(event: Dict, source_file) -> Dict[str, Any]: # noqa: 
     return message
 
 
+def message_for_slack_error_notification(error: Exception, s3_notification_event: Dict) -> Dict[str, Any]:
+    object_keys = [record["s3"]["object"]["key"] for record in s3_notification_event["Records"]]
+    if len(object_keys) == 1:
+        object_key = object_keys[0]
+    else:
+        object_key = "\n ".join(object_keys)
+
+    title = ":warning: *Failed to process event:*  :warning:"
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": title
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Error:*"
+            }
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"```{error}```"
+                }
+            ]
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Object(s):*"
+            }
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"{object_key}"
+                }
+            ]
+        }
+    ]
+    message = {"attachments": [{"color": "#FF0000", "blocks": blocks}]}
+
+    return message
+
+
+def message_for_rule_evaluation_error_notification(
+        error: Exception,
+        object_key: str,
+        rule: str
+) -> Dict[str, Any]:
+    title = ":warning: *Failed to evaluate rule:*  :warning:"
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": title
+            }
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Rule:* \n```{rule}```"
+                }
+            ]
+        },
+
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Error:* \n```{error}```"
+                }
+            ]
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Object:* \n{object_key}"
+                }
+            ]
+        }
+    ]
+    message = {"attachments": [{"color": "#FF0000", "blocks": blocks}]}
+
+    return message
+
+
 # For local testing
 if __name__ == "__main__":
+    from rules import default_rules
     hook_url = os.environ.get("HOOK_URL")
     if hook_url is None:
         raise Exception("HOOK_URL is not set!")
