@@ -107,3 +107,9 @@ variable "s3_removed_object_notification" {
   default     = true
   type        = bool
 }
+
+variable "rule_evaluation_errors_to_slack" {
+  description = "If rule evaluation error occurs, send notification to slack"
+  default     = true
+  type        = bool
+}

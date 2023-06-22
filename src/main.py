@@ -21,7 +21,7 @@ import json
 import os
 import urllib
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, NamedTuple
 
 import boto3
 from config import Config, get_logger
@@ -153,67 +153,69 @@ def get_hook_url_for_account(
     return default_hook_url
 
 
-# Filter out events
+class ProcessingResult(NamedTuple):
+    should_be_processed: bool
+    errors: List[Dict[str, Any]]
+
+
 def should_message_be_processed(
-    event: Dict,
+    event: Dict[str, Any],
     rules: List[str],
     ignore_rules: List[str],
-    source_file_object_key: str
-) -> bool:
+) -> ProcessingResult:
     flat_event = flatten_json(event)
     user = event["userIdentity"]
     event_name = event["eventName"]
     logger.debug({"Rules:": rules, "ignore_rules": ignore_rules})
     logger.debug({"Flattened event": flat_event})
 
+    errors = []
     for ignore_rule in ignore_rules:
         try:
             if eval(ignore_rule, {}, {"event": flat_event}) is True: # noqa: PGH001
                 logger.info({"Event matched ignore rule and will not be processed": {"ignore_rule": ignore_rule, "flat_event": flat_event}}) # noqa: E501
-                return False  # do not process event
+                return ProcessingResult(False, errors)
         except Exception as e:
             logger.exception({"Event parsing failed": {"error": e, "ignore_rule": ignore_rule, "flat_event": flat_event}}) # noqa: E501
-            post_slack_message(
-                hook_url = get_hook_url_for_account(event, cfg.configuration_as_json, cfg.default_hook_url),
-                message = message_for_rule_evaluation_error_notification(
-                error = e,
-                object_key = source_file_object_key,
-                rule = ignore_rule,
-                )
-            )
-            continue
+            errors.append({"error": e, "rule": ignore_rule})
 
     for rule in rules:
         try:
             if eval(rule, {}, {"event": flat_event}) is True: # noqa: PGH001
-                logger.info({"Event matched rule and will  be processed": {"rule": rule, "flat_event": flat_event}}) # noqa: E501
-                return True  # do send notification about event
+                logger.info({"Event matched rule and will be processed": {"rule": rule, "flat_event": flat_event}}) # noqa: E501
+                return ProcessingResult(True, errors)
         except Exception as e:
             logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}})
-            post_slack_message(
-                hook_url = get_hook_url_for_account(event, cfg.configuration_as_json, cfg.default_hook_url),
-                message = message_for_rule_evaluation_error_notification(
-                error = e,
-                object_key = source_file_object_key,
-                rule = rule,
-                )
-            )
-            continue
+            errors.append({"error": e, "rule": rule})
 
     logger.info({"Event did not match any rules and will not be processed": {"event": event_name, "user": user}}) # noqa: E501
-    return False
+    return ProcessingResult(False, errors)
 
 
-# Handle events
 def handle_event(
-    event: dict,
+    event: Dict[str, Any],
     source_file_object_key: str,
     rules: List[str],
     ignore_rules: List[str],
     hook_url: str
 ) -> None:
-    if should_message_be_processed(event, rules, ignore_rules, source_file_object_key) is not True:
+
+    result = should_message_be_processed(event, rules, ignore_rules)
+
+    if cfg.rule_evaluation_errors_to_slack:
+        for error in result.errors:
+            post_slack_message(
+                hook_url = get_hook_url_for_account(event, cfg.configuration_as_json, cfg.default_hook_url),
+                message = message_for_rule_evaluation_error_notification(
+                error = error["error"],
+                object_key = source_file_object_key,
+                rule = error["rule"],
+                )
+            )
+
+    if not result.should_be_processed:
         return
+
     # log full event if it is AccessDenied
     if ("errorCode" in event and "AccessDenied" in event["errorCode"]):
         event_as_string = json.dumps(event, indent=4)

@@ -15,6 +15,7 @@ class Config:
         self.use_default_rules: bool = os.environ.get("USE_DEFAULT_RULES") # type: ignore # noqa: PGH003
         self.events_to_track: str | None = os.environ.get("EVENTS_TO_TRACK")
         self.configuration: str | None = os.environ.get("CONFIGURATION")
+        self.rule_evaluation_errors_to_slack: bool = os.environ.get("RULE_EVALUATION_ERRORS_TO_SLACK") # type: ignore # noqa: PGH003, E501
         self.configuration_as_json: List[Dict]  = json.loads(self.configuration) if self.configuration else []
         self.rules = []
         if self.use_default_rules:
