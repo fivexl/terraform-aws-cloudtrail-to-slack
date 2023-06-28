@@ -1,22 +1,65 @@
-from typing import List, Dict
+from typing import List, Dict, Union
 import os
 import json
 from rules import default_rules
 import logging
 from datetime import datetime
+from dataclasses import dataclass
+
+
+@dataclass
+class SlackWebhookConfig:
+    default_hook_url: str
+    configuration: List[Dict]
+
+
+@dataclass
+class SlackAppConfig:
+    bot_token: str
+    default_channel_id: str
+    configuration: List[Dict]
+
+def get_slack_config() -> Union[SlackWebhookConfig, SlackAppConfig]:
+
+    if bot_token := os.environ.get("SLACK_BOT_TOKEN"):
+
+        default_channel_id: str | None = os.environ.get("DEFAULT_SLACK_CHANNEL_ID")
+        if not default_channel_id:
+            raise Exception("Environment variable DEFAULT_SLACK_CHANNEL_ID must be set.")
+
+        raw_configuration: str | None = os.environ.get("SLACK_APP_CONFIGURATION")
+        configuration: List[Dict] = json.loads(raw_configuration) if raw_configuration else []
+
+        return SlackAppConfig(
+            bot_token = bot_token,
+            default_channel_id = default_channel_id,
+            configuration = configuration,
+        )
+
+    elif hook_url := os.environ.get("HOOK_URL"):
+
+        raw_configuration: str | None = os.environ.get("CONFIGURATION")
+        configuration: List[Dict]  = json.loads(raw_configuration) if raw_configuration else []
+
+        return SlackWebhookConfig(
+            default_hook_url = hook_url,
+            configuration = configuration,
+        )
+
+    else:
+        raise Exception("Environment variable HOOK_URL or SLACK_BOT_TOKEN must be set.")
+
 
 
 class Config:
     def __init__(self): # noqa: ANN101 ANN204
-        self.default_hook_url: str = self.read_env_variable_or_die("HOOK_URL")
+
+        self.rule_evaluation_errors_to_slack: bool = os.environ.get("RULE_EVALUATION_ERRORS_TO_SLACK") # type: ignore # noqa: PGH003, E501
         self.rules_separator: str = os.environ.get("RULES_SEPARATOR", ",")
         self.user_rules: List[str] = self.parse_rules_from_string(os.environ.get("RULES"), self.rules_separator) # noqa: E501
         self.ignore_rules: List[str] = self.parse_rules_from_string(os.environ.get("IGNORE_RULES"), self.rules_separator) # noqa: E501
         self.use_default_rules: bool = os.environ.get("USE_DEFAULT_RULES") # type: ignore # noqa: PGH003
         self.events_to_track: str | None = os.environ.get("EVENTS_TO_TRACK")
-        self.configuration: str | None = os.environ.get("CONFIGURATION")
-        self.rule_evaluation_errors_to_slack: bool = os.environ.get("RULE_EVALUATION_ERRORS_TO_SLACK") # type: ignore # noqa: PGH003, E501
-        self.configuration_as_json: List[Dict]  = json.loads(self.configuration) if self.configuration else []
         self.rules = []
         if self.use_default_rules:
             self.rules += default_rules

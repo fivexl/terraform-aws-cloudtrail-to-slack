@@ -16,11 +16,16 @@ module "lambda" {
   environment_variables = merge(
     {
       HOOK_URL                        = var.default_slack_hook_url
+      CONFIGURATION                   = var.configuration != null ? jsonencode(var.configuration) : ""
+
+      SLACK_BOT_TOKEN                = var.slack_bot_token
+      SLACK_APP_CONFIGURATION        = var.slack_app_configuration != null ? jsonencode(var.slack_app_configuration) : ""
+      DEFAULT_SLACK_CHANNEL_ID       = var.default_slack_channel_id
+
       RULES_SEPARATOR                 = var.rules_separator
       RULES                           = var.rules
       IGNORE_RULES                    = var.ignore_rules
       EVENTS_TO_TRACK                 = var.events_to_track
-      CONFIGURATION                   = var.configuration != null ? jsonencode(var.configuration) : ""
       LOG_LEVEL                       = var.log_level
       RULE_EVALUATION_ERRORS_TO_SLACK = var.rule_evaluation_errors_to_slack
     },

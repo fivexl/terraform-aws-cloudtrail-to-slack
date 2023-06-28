@@ -1,12 +1,13 @@
+# SLACK CONFIGURATION:
+# Either the slack_bot_token or slack_hook_url can be used. If using slack_bot_token, the default_slack_channel_id must be provided.
+# If both slack_bot_token and slack_hook_url are passed, the slack_bot_token will take precedence.
+# The slack_bot_token offers additional features, such as consolidating duplicate events into a single message thread.
 
-variable "function_name" {
-  description = "Lambda function name"
-  default     = "fivexl-cloudtrail-to-slack"
-  type        = string
-}
-
+# -------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------
+# Slack Webhook URL configuration:
 variable "configuration" {
-  description = "Allows to configure slack web hook url per account(s) so you can separate events from different accounts to different channels. Useful in context of AWS organization"
+  description = "Allows the configuration of the Slack webhook URL per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization."
   type = list(object({
     accounts       = list(string)
     slack_hook_url = string
@@ -15,7 +16,42 @@ variable "configuration" {
 }
 
 variable "default_slack_hook_url" {
-  description = "Slack incoming webhook URL to be used if AWS account id does not match any account id from configuration variable"
+  description = "The Slack incoming webhook URL to be used if the AWS account ID does not match any account ID in the configuration variable."
+  type        = string
+  default     = null
+}
+
+# -------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------
+# Slack App Configuration:
+
+variable "slack_bot_token" {
+  description = "The Slack bot token used for sending messages to Slack."
+  type        = string
+  default     = null
+}
+
+variable "slack_app_configuration" {
+  description = "Allows the configuration of the Slack app per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization."
+  type = list(object({
+    accounts           = list(string)
+    slack_channel_id = string
+  }))
+  default = null
+}
+
+variable "default_slack_channel_id" {
+  description = "The Slack channel ID to be used if the AWS account ID does not match any account ID in the configuration variable."
+  type        = string
+  default     = null
+}
+
+# -------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------
+
+variable "function_name" {
+  description = "Lambda function name"
+  default     = "fivexl-cloudtrail-to-slack"
   type        = string
 }
 

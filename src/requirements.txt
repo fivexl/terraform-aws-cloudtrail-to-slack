@@ -3,3 +3,4 @@ pylint==2.6.0
 boto3
 pytest
 Ruff
+slack_sdk==3.21.3
