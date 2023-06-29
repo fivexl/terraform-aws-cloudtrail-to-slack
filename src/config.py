@@ -50,7 +50,6 @@ def get_slack_config() -> Union[SlackWebhookConfig, SlackAppConfig]:
         raise Exception("Environment variable HOOK_URL or SLACK_BOT_TOKEN must be set.")
 
 
-
 class Config:
     def __init__(self): # noqa: ANN101 ANN204
 
@@ -60,6 +59,10 @@ class Config:
         self.ignore_rules: List[str] = self.parse_rules_from_string(os.environ.get("IGNORE_RULES"), self.rules_separator) # noqa: E501
         self.use_default_rules: bool = os.environ.get("USE_DEFAULT_RULES") # type: ignore # noqa: PGH003
         self.events_to_track: str | None = os.environ.get("EVENTS_TO_TRACK")
+
+        self.dynamodb_table_name: str | None = os.environ.get("DYNAMODB_TABLE_NAME")
+        self.dynamodb_time_to_live: int = int(os.environ.get("DYNAMODB_TIME_TO_LIVE", 900))
+
         self.rules = []
         if self.use_default_rules:
             self.rules += default_rules
@@ -70,13 +73,6 @@ class Config:
             self.rules.append(f'"eventName" in event and event["eventName"] in {json.dumps(events_list)}')
         if not self.rules:
             raise Exception("Have no rules to apply! Check configuration - add some, or enable default.")
-
-    @staticmethod
-    def read_env_variable_or_die(var_name: str) -> str:
-        var_value = os.environ.get(var_name)
-        if var_value is None:
-            raise Exception(f"Environment variable {var_name} is not set")
-        return var_value
 
     @staticmethod
     def parse_rules_from_string(rules_as_string: str | None, rules_separator: str) -> List[str]:

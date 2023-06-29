@@ -155,3 +155,15 @@ variable "s3_notification_filter_prefix" {
   default     = "AWSLogs/"
   type        = string
 }
+
+variable "dynamodb_table_name" {
+  description = "Name of the dynamodb table, it would not be created if slack_bot_token is not set."
+  default     = "fivexl-cloudtrail-to-slack-table"
+  type        = string
+}
+
+variable "dynamodb_time_to_live" {
+  description = "How long to keep cloudtrail events in dynamodb table, for collecting similar events in thread of one message"
+  default     = 900
+  type        = number
+}

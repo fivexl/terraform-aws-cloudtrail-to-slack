@@ -15,12 +15,12 @@ module "lambda" {
 
   environment_variables = merge(
     {
-      HOOK_URL                        = var.default_slack_hook_url
-      CONFIGURATION                   = var.configuration != null ? jsonencode(var.configuration) : ""
+      HOOK_URL      = var.default_slack_hook_url
+      CONFIGURATION = var.configuration != null ? jsonencode(var.configuration) : ""
 
-      SLACK_BOT_TOKEN                = var.slack_bot_token
-      SLACK_APP_CONFIGURATION        = var.slack_app_configuration != null ? jsonencode(var.slack_app_configuration) : ""
-      DEFAULT_SLACK_CHANNEL_ID       = var.default_slack_channel_id
+      SLACK_BOT_TOKEN          = var.slack_bot_token
+      SLACK_APP_CONFIGURATION  = var.slack_app_configuration != null ? jsonencode(var.slack_app_configuration) : ""
+      DEFAULT_SLACK_CHANNEL_ID = var.default_slack_channel_id
 
       RULES_SEPARATOR                 = var.rules_separator
       RULES                           = var.rules
@@ -28,6 +28,9 @@ module "lambda" {
       EVENTS_TO_TRACK                 = var.events_to_track
       LOG_LEVEL                       = var.log_level
       RULE_EVALUATION_ERRORS_TO_SLACK = var.rule_evaluation_errors_to_slack
+
+      DYNAMODB_TIME_TO_LIVE = var.dynamodb_time_to_live
+      DYNAMODB_TABLE_NAME   = var.slack_bot_token != null ? module.cloudtrail_to_slack_dynamodb_table[0].dynamodb_table_id : ""
     },
     var.use_default_rules ? { USE_DEFAULT_RULES = "True" } : {}
   )
@@ -57,6 +60,17 @@ data "aws_iam_policy_document" "s3" {
       "${data.aws_s3_bucket.cloudtrail.arn}/*",
     ]
   }
+  statement {
+    sid = "AllowLambdaToInteractWithDynamoDB"
+
+    actions = [
+      "dynamodb:PutItem",
+      "dynamodb:GetItem",
+    ]
+   resources = [
+      "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.dynamodb_table_name}"
+   ] 
+  }
   dynamic "statement" {
     for_each = var.cloudtrail_logs_kms_key_id != "" ? { create = true } : {}
     content {
@@ -85,6 +99,8 @@ data "aws_s3_bucket" "cloudtrail" {
 }
 
 data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
 
 resource "aws_lambda_permission" "s3" {
   statement_id   = "AllowExecutionFromS3Bucket"

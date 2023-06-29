@@ -16,25 +16,29 @@
 # under the License.
 import gzip
 import json
-
 import os
 import urllib
-
 from typing import Any, Dict, List, NamedTuple
 
 import boto3
-from config import Config, get_logger
-
+from config import Config, get_logger, get_slack_config, SlackAppConfig, SlackWebhookConfig
+from dynamodb import get_thread_ts_from_dynamodb, put_event_to_dynamodb
 from slack_helpers import (
-    post_message,
-    message_for_slack_error_notification,
     event_to_slack_message,
-    message_for_rule_evaluation_error_notification
+    message_for_rule_evaluation_error_notification,
+    message_for_slack_error_notification,
+    post_message,
 )
+from slack_sdk.web.slack_response import SlackResponse
+
+s3_client = boto3.client("s3")
+dynamodb_client = boto3.client("dynamodb")
 
 
 cfg = Config()
 logger = get_logger()
+slack_config = get_slack_config()
+
 
 
 def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # noqa: ANN001
@@ -61,7 +65,8 @@ def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # no
     except Exception as e:
         post_message(
             message = message_for_slack_error_notification(e, s3_notification_event),
-            account_id = None
+            account_id = None,
+            slack_config = slack_config,
         )
         logger.exception({"Failed to process event": e})
     return 200
@@ -77,7 +82,7 @@ def handle_removed_object_record(
         source_file = record["s3"]["object"]["key"],
         account_id_from_event = account_id,
     )
-    post_message(message = message, account_id = account_id)
+    post_message(message = message, account_id = account_id, slack_config = slack_config)
 
 
 def handle_created_object_record(
@@ -97,7 +102,6 @@ def handle_created_object_record(
 
 def get_cloudtrail_log_records(record: Dict) -> Dict | None:
     # Get all the files from S3 so we can process them
-    s3 = boto3.client("s3")
 
     # In case if we get something unexpected
     if "s3" not in record:
@@ -108,7 +112,7 @@ def get_cloudtrail_log_records(record: Dict) -> Dict | None:
     if "Digest" in key:
         return
     try:
-        response = s3.get_object(Bucket=bucket, Key=key)
+        response = s3_client.get_object(Bucket=bucket, Key=key)
         with gzip.GzipFile(fileobj=response["Body"]) as gzipfile:
             content = gzipfile.read()
         content_as_json = json.loads(content.decode("utf8"))
@@ -167,7 +171,7 @@ def handle_event(
     source_file_object_key: str,
     rules: List[str],
     ignore_rules: List[str],
-) -> None:
+) -> SlackResponse | None:
 
     result = should_message_be_processed(event, rules, ignore_rules)
     account_id = event["userIdentity"]["accountId"] if "accountId" in event["userIdentity"] else""
@@ -180,6 +184,7 @@ def handle_event(
                 rule = error["rule"],
                 ),
                 account_id = account_id,
+                slack_config = slack_config,
             )
 
     if not result.should_be_processed:
@@ -189,8 +194,49 @@ def handle_event(
     if ("errorCode" in event and "AccessDenied" in event["errorCode"]):
         event_as_string = json.dumps(event, indent=4)
         logger.info({"errorCode": "AccessDenied", "log full event": event_as_string})
+
     message = event_to_slack_message(event, source_file_object_key, account_id)
-    post_message(message = message, account_id = account_id,)
+
+    if isinstance(slack_config, SlackAppConfig):
+        thread_ts = get_thread_ts_from_dynamodb(
+            cfg = cfg,
+            event = event,
+            dynamodb_client=dynamodb_client,
+        )
+        if thread_ts is not None:
+            # If we have a thread_ts, we can post the message to the thread
+            logger.info({"Posting message to thread": {"thread_ts": thread_ts}})
+            return post_message(
+                message = message,
+                account_id = account_id,
+                thread_ts = thread_ts,
+                slack_config = slack_config,
+            )
+        else:
+            # If we don't have a thread_ts, we need to post the message to the channel
+            logger.info({"Posting message to channel"})
+            slack_response = post_message(
+                message = message,
+                account_id = account_id,
+                slack_config = slack_config
+            )
+            if slack_response is not None:
+                logger.info({"Saving thread_ts to DynamoDB"})
+                thread_ts = slack_response.get("ts")
+                if thread_ts is not None:
+                    put_event_to_dynamodb(
+                        cfg = cfg,
+                        event = event,
+                        thread_ts = thread_ts,
+                        dynamodb_client=dynamodb_client,
+                    )
+    if isinstance(slack_config, SlackWebhookConfig):
+        return post_message(
+            message = message,
+            account_id = account_id,
+            slack_config = slack_config,
+        )
+
 
 
 # Flatten json

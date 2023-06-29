@@ -5,16 +5,33 @@ from config import get_slack_config, get_logger, SlackAppConfig, SlackWebhookCon
 from dateutil.parser import parse as parse_date
 from slack_sdk import WebClient
 from typing import Any
+from slack_sdk.web.slack_response import SlackResponse
 
 logger = get_logger()
 
-slack_config = get_slack_config()
 
 
-def post_message(
+def post_message( # noqa: ANN201
+        slack_config: SlackAppConfig | SlackWebhookConfig,
         message: dict,
-        account_id: str | None,
-) -> None:
+        account_id: str | None = None,
+        thread_ts: str | None = None,
+) -> None | SlackResponse:
+
+    if isinstance(slack_config, SlackAppConfig):
+        if account_id:
+            channel_id = next(
+                (cfg["slack_channel_id"] for cfg in slack_config.configuration if account_id in cfg["accounts"]), # noqa: E501
+                slack_config.default_channel_id
+            )
+        else:
+            channel_id = slack_config.default_channel_id
+        return slack_app_post_message(
+            message = message,
+            channel_id = channel_id,
+            slack_config = slack_config,
+            thread_ts = thread_ts,
+        )
 
     if isinstance(slack_config, SlackWebhookConfig):
         if account_id:
@@ -29,26 +46,18 @@ def post_message(
             hook_url = hook_url,
         )
 
-    if isinstance(slack_config, SlackAppConfig):
-        if account_id:
-            channel_id = next(
-                (cfg["slack_channel_id"] for cfg in slack_config.configuration if account_id in cfg["accounts"]), # noqa: E501
-                slack_config.default_channel_id
-            )
-        else:
-            channel_id = slack_config.default_channel_id
-        slack_app_post_message(
-            message = message,
-            channel_id = channel_id,
-            slack_config = slack_config,
-        )
 
-
-def slack_app_post_message(message: dict, channel_id: str, slack_config: SlackAppConfig): # noqa: ANN201
+def slack_app_post_message( # noqa: ANN201
+        message: dict,
+        channel_id: str,
+        slack_config: SlackAppConfig,
+        thread_ts: str | None = None
+):
     client = WebClient(token=slack_config.bot_token)
     return client.chat_postMessage(
         channel = channel_id,
         blocks = message["blocks"],
+        thread_ts = thread_ts,
         text="New message from CloudTrailToSlack"
     )
 
