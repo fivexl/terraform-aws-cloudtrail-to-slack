@@ -43,7 +43,6 @@ def put_event_to_dynamodb(
             "principal_structure_and_action_hash": {"S": hash_value},
             "thread_ts": {"S": thread_ts},
             "ttl": {"N": str(expire_at)},
-            "date": {"S": str(datetime.utcnow())},
         }
     )
 

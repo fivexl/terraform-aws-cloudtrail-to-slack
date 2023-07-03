@@ -5,6 +5,8 @@ from main import ProcessingResult, should_message_be_processed
 from rules import default_rules
 
 # ruff: noqa: ANN201, ANN001, E501
+# for CI testing purposes, path to test_events.json was changed to tests/test_events.json, so to run tests locally
+# you need to change it back to src/tests/test_events.json, or run command from src directory:
 
 # Tests can be run by : pytest --log-disable=main tests/test_message_processing.py -v
 
