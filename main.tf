@@ -67,9 +67,9 @@ data "aws_iam_policy_document" "s3" {
       "dynamodb:PutItem",
       "dynamodb:GetItem",
     ]
-   resources = [
+    resources = [
       "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.dynamodb_table_name}"
-   ] 
+    ]
   }
   dynamic "statement" {
     for_each = var.cloudtrail_logs_kms_key_id != "" ? { create = true } : {}

@@ -34,7 +34,7 @@ variable "slack_bot_token" {
 variable "slack_app_configuration" {
   description = "Allows the configuration of the Slack app per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization."
   type = list(object({
-    accounts           = list(string)
+    accounts         = list(string)
     slack_channel_id = string
   }))
   default = null
