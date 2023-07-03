@@ -6,10 +6,9 @@ from rules import default_rules
 
 # ruff: noqa: ANN201, ANN001, E501
 
+# Tests can be run by : pytest --log-disable=main tests/test_message_processing.py -v
 
-# Tests can be run by : pytest --log-disable=main src/tests/test_message_processing.py -v
-
-with open("src/tests/test_events.json") as f:
+with open("tests/test_events.json") as f:
     data = json.load(f)
 
 
