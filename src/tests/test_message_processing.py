@@ -1,13 +1,13 @@
 import json
 
 import pytest
-from main import should_message_be_processed, ProcessingResult
+from main import ProcessingResult, should_message_be_processed
 from rules import default_rules
 
 # ruff: noqa: ANN201, ANN001, E501
 
 
-# Tests can be run by : pytest src/tests/test_message_processing.py -v
+# Tests can be run by : pytest --log-disable=main src/tests/test_message_processing.py -v
 
 with open("src/tests/test_events.json") as f:
     data = json.load(f)
@@ -77,7 +77,7 @@ def message_should_not_be_processed_test_cases(request):
                 },
             },
             "out": {
-                "result": ProcessingResult(should_be_processed=True, errors=[{"error": str(NameError("name 'incorrect_rule' is not defined")), "rule": "incorrect_rule"}]),
+                "result": ProcessingResult(should_be_processed=True, errors=[{"error": NameError("name 'incorrect_rule' is not defined"), "rule": "incorrect_rule"}]),
             },
         },
     ],
@@ -112,11 +112,22 @@ def test_message_should_not_be_processed_with_rules_as_ignor_rules(message_shoul
         ) == ProcessingResult(should_be_processed=False, errors=[])
 
 
-def test_should_message_be_processed_with_ParsingEventError_handling(message_should_be_processed_with_incorrect_rule_test_case) -> None:
+def test_should_message_be_processed_with_ParsingEventError_handling(
+    message_should_be_processed_with_incorrect_rule_test_case
+) -> None:
     almost_default_rules = default_rules.copy()
-    almost_default_rules.insert(0, message_should_be_processed_with_incorrect_rule_test_case["in"]["incorrect_rule"])
-    assert should_message_be_processed(
-            event = message_should_be_processed_with_incorrect_rule_test_case["in"]["event"],
-            rules = almost_default_rules, # type: ignore # noqa:
-            ignore_rules = [],
-        ) == message_should_be_processed_with_incorrect_rule_test_case["out"]["result"]
+    almost_default_rules.insert(
+        0, message_should_be_processed_with_incorrect_rule_test_case["in"]["incorrect_rule"]
+    )
+    result = should_message_be_processed(
+        event=message_should_be_processed_with_incorrect_rule_test_case["in"]["event"],
+        rules=almost_default_rules,  # type: ignore # noqa:
+        ignore_rules=[],
+    )
+
+    # check that the result without considering errors is correct
+    assert result.should_be_processed == message_should_be_processed_with_incorrect_rule_test_case["out"]["result"].should_be_processed
+
+    # compare error messages in the result
+    assert str(result.errors[0]["error"]) == str(message_should_be_processed_with_incorrect_rule_test_case["out"]["result"].errors[0]["error"])
+    assert result.errors[0]["rule"] == message_should_be_processed_with_incorrect_rule_test_case["out"]["result"].errors[0]["rule"]

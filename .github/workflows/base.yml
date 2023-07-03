@@ -13,6 +13,7 @@ jobs:
     with:
       python-version: "3.10"
       aws-default-region: "eu-central-1"
+      working-directory: "src"
 
   terraform-job:
     uses: fivexl/github-reusable-workflows/.github/workflows/terraform-job.yml@main
