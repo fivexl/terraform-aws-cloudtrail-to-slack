@@ -101,14 +101,16 @@ def get_logger(name: str ="main") -> logging.Logger:
     log_level = logging.getLevelName(log_level)
 
     root_logger = logging.getLogger()
-    root_logger.handlers = []
+    if root_logger.handlers:
+        root_logger.handlers = [] # Remove the default lambda logger
     root_logger.setLevel(log_level)
 
     logger = logging.getLogger(name)
-    handler = logging.StreamHandler()
-    formatter = JsonFormatter()
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    if not logger.handlers:  # Check if the logger already has handlers
+        handler = logging.StreamHandler()
+        formatter = JsonFormatter()
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
     logger.setLevel(log_level)
 
     return logger

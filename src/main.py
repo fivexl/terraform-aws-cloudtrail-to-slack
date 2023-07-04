@@ -46,8 +46,8 @@ def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # no
     try:
         for record in s3_notification_event["Records"]:
             event_name: str = record["eventName"]
-            if "Digest" not in record["s3"]["object"]["key"]:
-                logger.debug({"s3_notification_event": s3_notification_event})
+            if "Digest" in record["s3"]["object"]["key"]:
+                return 200
 
             if event_name.startswith("ObjectRemoved"):
                 handle_removed_object_record(
@@ -89,6 +89,7 @@ def handle_created_object_record(
         record: dict,
         cfg: Config,
 ) -> None:
+    logger.debug({"s3_notification_event": record})
     cloudtrail_log_record = get_cloudtrail_log_records(record)
     if cloudtrail_log_record:
         for cloudtrail_log_event in cloudtrail_log_record["events"]:
@@ -109,8 +110,6 @@ def get_cloudtrail_log_records(record: Dict) -> Dict | None:
     bucket = record["s3"]["bucket"]["name"]
     key = urllib.parse.unquote_plus(record["s3"]["object"]["key"], encoding="utf-8") # type: ignore # noqa: PGH003, E501
     # Do not process digest files
-    if "Digest" in key:
-        return
     try:
         response = s3_client.get_object(Bucket=bucket, Key=key)
         with gzip.GzipFile(fileobj=response["Body"]) as gzipfile:
