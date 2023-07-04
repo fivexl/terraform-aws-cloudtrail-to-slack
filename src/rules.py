@@ -17,6 +17,11 @@
 
 # Rules in rules list will be applied to the CloudTrail event one by one and if any matches
 # then event will be processed and published to Slack
+
+import os
+
+function_name = os.environ.get("FUNCTION_NAME", "fivexl-cloudtrail-to-slack")
+
 default_rules = []
 
 # Notify if someone logged in without MFA but skip notification for SSO logins
@@ -39,3 +44,15 @@ default_rules.append('event["eventSource"] == "cloudtrail.amazonaws.com" '
                      'and event["eventName"] == "UpdateTrail"')
 default_rules.append('event["eventSource"] == "cloudtrail.amazonaws.com" '
                      'and event["eventName"] == "DeleteTrail"')
+
+
+# Catch cloudtrail to slack lambda changes
+default_rules.append('event["eventSource"] == "lambda.amazonaws.com" '
+                     'and "responseElements.functionName" in event '
+                     f'and event["responseElements.functionName"] == "{function_name}" '
+                     'and event["eventName"].startswith(("UpdateFunctionConfiguration"))')
+default_rules.append('event["eventSource"] == "lambda.amazonaws.com" '
+                     'and "responseElements.functionName" in event '
+                     f'and event["responseElements.functionName"] == "{function_name}" '
+                     'and event["eventName"].startswith(("UpdateFunctionCode"))')
+

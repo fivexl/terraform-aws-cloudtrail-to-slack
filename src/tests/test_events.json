@@ -267,6 +267,180 @@
                 "eventCategory": "Management",
                 "sessionCredentialFromConsole": "true"
             }
-        } 
+        },
+        {
+            "test_event_name": "UpdateFunctionCode",
+            "event":{
+                "eventVersion": "1.08",
+                "userIdentitytype": "AssumedRole",
+                "userIdentity": {
+                    "principalId": "-",
+                    "arn": "--",
+                    "accountId": "-",
+                    "accessKeyId": "-",
+                    "sessionContext": {
+                        "sessionIssuer": {
+                                "type": "Role",
+                                "principalId": "-",
+                                "arn": "--",
+                                "accountId": "-",
+                                "userName": "-"
+                            },
+                            "attributes": {
+                                "creationDate": "2023-07-03T18:07:02Z",
+                                "mfaAuthenticated": "false"
+                            }
+                    }
+                },
+                "eventTime": "2023-07-03T18:08:37Z",
+                "eventSource": "lambda.amazonaws.com",
+                "eventName": "UpdateFunctionCode20150331v2",
+                "awsRegion": "eu-central-1",
+                "sourceIPAddress": "-",
+                "userAgent": "-",
+                "requestParameters": {
+                    "fullyQualifiedArn": {
+                        "arnPrefix": {
+                            "partition": "aws",
+                            "region": "eu-central-1",
+                            "account": "-"
+                        },
+                        "relativeId": {
+                            "functionName": "fivexl-cloudtrail-to-slack"
+                        }
+                    },
+                    "functionName": "-",
+                    "publish": false,
+                    "dryRun": false
+                },
+                "responseElements": {
+                    "functionName": "fivexl-cloudtrail-to-slack",
+                    "functionArn": "-k",
+                    "runtime": "python3.10",
+                    "role": "arn:aws:iam::-:role/fivexl-cloudtrail-to-slack",
+                    "handler": "main.lambda_handler",
+                    "codeSize": 23383731,
+                    "description": "Send CloudTrail Events to Slack",
+                    "timeout": 30,
+                    "memorySize": 128,
+                    "lastModified": "2023-07-03T18:08:37.000+0000",
+                    "codeSha256": "-",
+                    "version": "$LATEST",
+                    "tracingConfig": {
+                        "mode": "PassThrough"
+                    },
+                    "revisionId": "-",
+                    "state": "Active",
+                    "lastUpdateStatus": "InProgress",
+                    "lastUpdateStatusReason": "The function is being created.",
+                    "lastUpdateStatusReasonCode": "Creating",
+                    "packageType": "Zip",
+                    "architectures": {"0": "x86_64"},
+                    "ephemeralStorage": {"size": 512},
+                    "snapStart": {
+                        "applyOn": "None",
+                        "optimizationStatus": "Off"
+                    },
+                    "runtimeVersionConfig": {
+                        "runtimeVersionArn": "-"
+                    }
+                },
+                "requestID": "-",
+                "eventID": "-",
+                "readOnly": false,
+                "eventType": "AwsApiCall",
+                "managementEvent": true,
+                "recipientAccountId": "-",
+                "eventCategory": "Management",
+                "tlsDetails": {
+                    "tlsVersion": "-",
+                    "cipherSuite": "-",
+                    "clientProvidedHostHeader": "lambda.eu-central-1.amazonaws.com"
+                }
+            }
+        },
+        {
+            "test_event_name": "UpdateFunctionConfiguration",
+            "event": {
+                "eventVersion": "1.08",
+                "userIdentity": {
+                    "type": "AssumedRole",
+                    "principalId": "",
+                    "arn": "-",
+                    "accountId": "-",
+                    "accessKeyId": "-",
+                    "sessionContext": {
+                        "sessionIssuer": {
+                            "type": "Role",
+                            "principalId": "-",
+                            "arn": "--",
+                            "accountId": "-",
+                            "userName": "-"
+                        },
+                        "webIdFederationData": {},
+                        "attributes": {
+                            "creationDate": "2023-07-04T06:53:06Z",
+                            "mfaAuthenticated": "false"
+                        }
+                    }
+                },
+                "eventTime": "-",
+                "eventSource": "lambda.amazonaws.com",
+                "eventName": "UpdateFunctionConfiguration20150331v2",
+                "awsRegion": "-",
+                "sourceIPAddress": "-",
+                "userAgent": "-",
+                "requestParameters": {
+                    "functionName": "fivexl-cloudtrail-to-slack",
+                    "timeout": 10,
+                    "environment": {}
+                },
+                "responseElements": {
+                    "functionName": "fivexl-cloudtrail-to-slack",
+                    "functionArn": "-",
+                    "runtime": "python3.10",
+                    "role": "-",
+                    "handler": "main.lambda_handler",
+                    "codeSize": 23564916,
+                    "description": "Send CloudTrail Events to Slack",
+                    "timeout": 10,
+                    "memorySize": 128,
+                    "lastModified": "-",
+                    "codeSha256": "-",
+                    "version": "$LATEST",
+                    "environment": {},
+                    "tracingConfig": {
+                        "mode": "PassThrough"
+                    },
+                    "revisionId": "-",
+                    "state": "Active",
+                    "lastUpdateStatus": "InProgress",
+                    "lastUpdateStatusReason": "The function is being created.",
+                    "lastUpdateStatusReasonCode": "Creating",
+                    "packageType": "Zip",
+                    "architectures": [
+                        "x86_64"
+                    ],
+                    "ephemeralStorage": {
+                        "size": 512
+                    },
+                    "snapStart": {
+                        "applyOn": "None",
+                        "optimizationStatus": "Off"
+                    },
+                    "runtimeVersionConfig": {
+                        "runtimeVersionArn": "-"
+                    }
+                },
+                "requestID": "-",
+                "eventID": "-",
+                "readOnly": false,
+                "eventType": "AwsApiCall",
+                "managementEvent": true,
+                "recipientAccountId": "-",
+                "eventCategory": "Management"
+            }
+        }
     ]
 }
+

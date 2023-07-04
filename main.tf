@@ -15,6 +15,8 @@ module "lambda" {
 
   environment_variables = merge(
     {
+      FUNCTION_NAME = var.function_name
+
       HOOK_URL      = var.default_slack_hook_url
       CONFIGURATION = var.configuration != null ? jsonencode(var.configuration) : ""
 
