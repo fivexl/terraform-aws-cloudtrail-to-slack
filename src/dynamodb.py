@@ -1,6 +1,5 @@
 import hashlib
 import time
-from datetime import datetime
 
 from config import Config, get_logger
 
@@ -10,7 +9,7 @@ logger = get_logger()
 def hash_user_identity_and_event_name(event: dict,) -> str:
 
     user_identity = event["userIdentity"]
-    type = user_identity["type"]
+    type = user_identity.get("type", "N/A")
     principalId = user_identity["principalId"]
     arn = user_identity["arn"]
     accountId = user_identity["accountId"]

@@ -16,12 +16,11 @@
 # under the License.
 import gzip
 import json
-import os
 import urllib
 from typing import Any, Dict, List, NamedTuple
 
 import boto3
-from config import Config, get_logger, get_slack_config, SlackAppConfig, SlackWebhookConfig
+from config import Config, SlackAppConfig, SlackWebhookConfig, get_logger, get_slack_config
 from dynamodb import get_thread_ts_from_dynamodb, put_event_to_dynamodb
 from slack_helpers import (
     event_to_slack_message,
@@ -259,12 +258,32 @@ def flatten_json(y: dict) -> dict:
 
 # For local testing
 if __name__ == "__main__":
-    from rules import default_rules
-    hook_url = os.environ.get("HOOK_URL")
-    if hook_url is None:
-        raise Exception("HOOK_URL is not set!")
-    ignore_rules = ["'userIdentity.accountId' in event and event['userIdentity.accountId'] == 'YYYYYYYYYYY'"]
+    #Before running this script, set environment variables below
+    #On top of this file add region to boto3 clients
+    #and remove cfg = Config() slack_config = get_slack_config() from top of this file.
+    import os
+    os.environ["SLACK_BOT_TOKEN"] = ""
+    os.environ["DEFAULT_SLACK_CHANNEL_ID"] = ""
+    os.environ["SLACK_APP_CONFIGURATION"] = ""
+
+    os.environ["DYNAMODB_TABLE_NAME"] = ""
+    os.environ["DYNAMODB_TIME_TO_LIVE"] = ""
+
+    os.environ["HOOK_URL"] = ""
+    os.environ["CONFIGURATION"] = ""
+
+    os.environ["RULE_EVALUATION_ERRORS_TO_SLACK"] = ""
+    os.environ["RULES_SEPARATOR"] = ","
+    os.environ["RULES"] = ""
+    os.environ["IGNORE_RULES"] = ""
+    os.environ["USE_DEFAULT_RULES"] = ""
+    os.environ["EVENTS_TO_TRACK"] = ""
+    os.environ["LOG_LEVEL"] = ""
+
+    cfg = Config()
+    slack_config = get_slack_config()
+
     with open("./tests/test_events.json") as f:
         data = json.load(f)
-    for event in data:
-        handle_event(event, "file_name", default_rules, ignore_rules)
+    for event in data["test_events"]:
+        handle_event(event["event"], "file_name", cfg.rules, cfg.ignore_rules)

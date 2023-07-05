@@ -57,7 +57,7 @@ class Config:
         self.rules_separator: str = os.environ.get("RULES_SEPARATOR", ",")
         self.user_rules: List[str] = self.parse_rules_from_string(os.environ.get("RULES"), self.rules_separator) # noqa: E501
         self.ignore_rules: List[str] = self.parse_rules_from_string(os.environ.get("IGNORE_RULES"), self.rules_separator) # noqa: E501
-        self.use_default_rules: bool = os.environ.get("USE_DEFAULT_RULES") # type: ignore # noqa: PGH003
+        self.use_default_rules: bool = os.environ.get("USE_DEFAULT_RULES", True) # type: ignore # noqa: PGH003
         self.events_to_track: str | None = os.environ.get("EVENTS_TO_TRACK")
 
         self.dynamodb_table_name: str | None = os.environ.get("DYNAMODB_TABLE_NAME")

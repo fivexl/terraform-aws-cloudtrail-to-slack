@@ -11,7 +11,7 @@
                     "accountId": "XXXXXXXXXXX",
                     "userName": "xxxxxxxx"
                 },
-                "eventTime": "2019-07-03T16:14:51Z",
+                "eventTime": "2000-01-03T16:14:51Z",
                 "eventSource": "signin.amazonaws.com",
                 "eventName": "ConsoleLogin",
                 "awsRegion": "us-east-1",
@@ -51,7 +51,7 @@
                         }
                     }
                 },
-                "eventTime": "2023-06-13T11:03:44Z",
+                "eventTime": "2000-01-03T16:14:51Z",
                 "eventSource": "cloudtrail.amazonaws.com",
                 "eventName": "StopLogging",
                 "awsRegion": "eu-central-1",
@@ -91,7 +91,7 @@
                         }
                     }
                 },
-                "eventTime": "2023-06-13T11:04:48Z",
+                "eventTime": "2000-01-03T16:14:51Z",
                 "eventSource": "cloudtrail.amazonaws.com",
                 "eventName": "UpdateTrail",
                 "awsRegion": "XXXXXXXXXXX",
@@ -128,7 +128,7 @@
                         }
                     }
                 },
-                "eventTime": "2023-06-13T11:04:59Z",
+                "eventTime": "2000-01-03T16:14:51Z",
                 "eventSource": "cloudtrail.amazonaws.com",
                 "eventName": "DeleteTrail",
                 "awsRegion": "XXXXXXXXXXX",
@@ -159,7 +159,7 @@
                     "accountId": "XXXXXXXXXXXXXXXXXXXX",
                     "accessKeyId": ""
                 },
-                "eventTime": "XXXXXXXXXXXXXXXXXXXX",
+                "eventTime": "2000-01-03T16:14:51Z",
                 "eventSource": "signin.amazonaws.com",
                 "eventName": "ConsoleLogin",
                 "awsRegion": "XXXXXXXXXXXXXXXXXXXX",
@@ -202,7 +202,7 @@
                         }
                     }
                 },
-                "eventTime": "2023-06-09T07:46:09Z",
+                "eventTime": "2000-01-03T16:14:51Z",
                 "eventSource": "ec2.amazonaws.com",
                 "eventName": "DescribeInstances",
                 "awsRegion": "eu-central-1",
@@ -248,7 +248,7 @@
                         }
                     }
                 },
-                "eventTime": "XXXXXXXXXXXXX",
+                "eventTime": "2000-01-03T16:14:51Z",
                 "eventSource": "health.amazonaws.com",
                 "eventName": "DescribeEventAggregates",
                 "awsRegion": "us-east-1",
@@ -292,7 +292,7 @@
                             }
                     }
                 },
-                "eventTime": "2023-07-03T18:08:37Z",
+                "eventTime": "2000-01-03T16:14:51Z",
                 "eventSource": "lambda.amazonaws.com",
                 "eventName": "UpdateFunctionCode20150331v2",
                 "awsRegion": "eu-central-1",
@@ -384,7 +384,7 @@
                         }
                     }
                 },
-                "eventTime": "-",
+                "eventTime": "2000-01-03T16:14:51Z",
                 "eventSource": "lambda.amazonaws.com",
                 "eventName": "UpdateFunctionConfiguration20150331v2",
                 "awsRegion": "-",

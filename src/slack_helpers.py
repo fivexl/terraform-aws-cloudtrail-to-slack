@@ -1,7 +1,7 @@
 import http.client
 import json
 
-from config import get_slack_config, get_logger, SlackAppConfig, SlackWebhookConfig
+from config import  get_logger, SlackAppConfig, SlackWebhookConfig
 from dateutil.parser import parse as parse_date
 from slack_sdk import WebClient
 from typing import Any
