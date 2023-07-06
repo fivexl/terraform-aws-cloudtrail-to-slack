@@ -29,15 +29,15 @@ from slack_helpers import (
     post_message,
 )
 from slack_sdk.web.slack_response import SlackResponse
-
-s3_client = boto3.client("s3")
-dynamodb_client = boto3.client("dynamodb")
-
+from sns import send_message_to_sns
 
 cfg = Config()
 logger = get_logger()
 slack_config = get_slack_config()
 
+s3_client = boto3.client("s3")
+dynamodb_client = boto3.client("dynamodb")
+sns_client = boto3.client("sns")
 
 
 def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # noqa: ANN001
@@ -195,6 +195,14 @@ def handle_event(
 
     message = event_to_slack_message(event, source_file_object_key, account_id)
 
+    send_message_to_sns(
+        event = event,
+        source_file = source_file_object_key,
+        account_id = account_id,
+        cfg = cfg,
+        sns_client = sns_client,
+    )
+
     if isinstance(slack_config, SlackAppConfig):
         thread_ts = get_thread_ts_from_dynamodb(
             cfg = cfg,
@@ -279,6 +287,9 @@ if __name__ == "__main__":
     os.environ["USE_DEFAULT_RULES"] = ""
     os.environ["EVENTS_TO_TRACK"] = ""
     os.environ["LOG_LEVEL"] = ""
+    os.environ["DEFAULT_SNS_TOPIC_ARN"] = ""
+    os.environ["SNS_CONFIGURATION"] = '[{""}]'
+
 
     cfg = Config()
     slack_config = get_slack_config()

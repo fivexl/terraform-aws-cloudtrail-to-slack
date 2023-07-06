@@ -53,6 +53,10 @@ def get_slack_config() -> Union[SlackWebhookConfig, SlackAppConfig]:
 class Config:
     def __init__(self): # noqa: ANN101 ANN204
 
+        self.default_sns_topic_arn: str | None = os.environ.get("DEFAULT_SNS_TOPIC_ARN")
+        raw_sns_configuration: str = os.environ.get("SNS_CONFIGURATION", "")
+        self.sns_configuration: List[Dict] = json.loads(raw_sns_configuration) if raw_sns_configuration else[]
+
         self.rule_evaluation_errors_to_slack: bool = os.environ.get("RULE_EVALUATION_ERRORS_TO_SLACK") # type: ignore # noqa: PGH003, E501
         self.rules_separator: str = os.environ.get("RULES_SEPARATOR", ",")
         self.user_rules: List[str] = self.parse_rules_from_string(os.environ.get("RULES"), self.rules_separator) # noqa: E501

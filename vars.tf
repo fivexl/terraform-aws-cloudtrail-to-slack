@@ -49,6 +49,37 @@ variable "default_slack_channel_id" {
 # -------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------
 
+# SNS Notification Configuration:
+
+# If both `aws_sns_topic_subscription_email` and `default_sns_topic_arn` are null, no SNS notifications will be sent.
+# If `default_sns_topic_arn` or `aws_sns_topic_subscription_email` is set, the module will either use the specified value or create a new SNS topic for notifications.
+# Messages will be published to this topic, and all associated subscriptions will receive these notifications.
+# If both `default_sns_topic_arn` and `aws_sns_topic_subscription_email` are provided, the module will not create a new SNS topic, but use the existing one.
+
+variable "aws_sns_topic_subscription_emails" {
+  description = "If set, a topic will be created and placed in the default_sns_topic_arn, and all emails in this list will be subscribed to this topic."
+  type        = list(string)
+  default     = []
+}
+
+variable "default_sns_topic_arn" {
+  description = "Default topic for all notifications. If not set, sns notifications will not be sent."
+  type        = string
+  default     = null
+}
+
+variable "sns_configuration" {
+  description = "Allows the configuration of the SNS topic per account(s)."
+  type = list(object({
+    accounts      = list(string)
+    sns_topic_arn = string
+  }))
+  default = null
+}
+
+# -------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------
+
 variable "function_name" {
   description = "Lambda function name"
   default     = "fivexl-cloudtrail-to-slack"

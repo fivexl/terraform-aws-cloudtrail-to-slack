@@ -24,6 +24,9 @@ module "lambda" {
       SLACK_APP_CONFIGURATION  = var.slack_app_configuration != null ? jsonencode(var.slack_app_configuration) : ""
       DEFAULT_SLACK_CHANNEL_ID = var.default_slack_channel_id
 
+      DEFAULT_SNS_TOPIC_ARN = var.default_sns_topic_arn != null ? var.default_sns_topic_arn : length(var.aws_sns_topic_subscription_emails) > 0 ? aws_sns_topic.events_to_sns[0].arn : ""
+      SNS_CONFIGURATION     = var.sns_configuration != null ? jsonencode(var.sns_configuration) : ""
+
       RULES_SEPARATOR                 = var.rules_separator
       RULES                           = var.rules
       IGNORE_RULES                    = var.ignore_rules
