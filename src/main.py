@@ -203,6 +203,13 @@ def handle_event(
         sns_client = sns_client,
     )
 
+    if isinstance(slack_config, SlackWebhookConfig):
+        return post_message(
+            message = message,
+            account_id = account_id,
+            slack_config = slack_config,
+        )
+
     if isinstance(slack_config, SlackAppConfig):
         thread_ts = get_thread_ts_from_dynamodb(
             cfg = cfg,
@@ -236,12 +243,6 @@ def handle_event(
                         thread_ts = thread_ts,
                         dynamodb_client=dynamodb_client,
                     )
-    if isinstance(slack_config, SlackWebhookConfig):
-        return post_message(
-            message = message,
-            account_id = account_id,
-            slack_config = slack_config,
-        )
 
 
 
