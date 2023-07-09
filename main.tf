@@ -77,6 +77,36 @@ data "aws_iam_policy_document" "s3" {
     ]
   }
   dynamic "statement" {
+    for_each = length(aws_sns_topic.events_to_sns) > 0 ? [1] : []
+    content {
+      sid = "AllowLambdaToPushToSNSTopic"
+
+      actions = [
+        "sns:Publish",
+      ]
+
+      resources = [
+        aws_sns_topic.events_to_sns[0].arn,
+      ]
+    }
+  }
+
+  dynamic "statement" {
+    for_each = var.default_sns_topic_arn != null ? [1] : []
+    content {
+      sid = "AllowLambdaToPushToDefaultSNSTopic"
+
+      actions = [
+        "sns:Publish",
+      ]
+
+      resources = [
+        var.default_sns_topic_arn,
+      ]
+    }
+  }
+
+  dynamic "statement" {
     for_each = var.cloudtrail_logs_kms_key_id != "" ? { create = true } : {}
     content {
       sid = "AllowLambdaToUseKMSKey"
