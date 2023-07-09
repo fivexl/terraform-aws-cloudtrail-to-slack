@@ -18,14 +18,14 @@ module "lambda" {
       FUNCTION_NAME = var.function_name
 
       HOOK_URL      = var.default_slack_hook_url
-      CONFIGURATION = var.configuration != null ? jsonencode(var.configuration) : ""
+      CONFIGURATION = try(jsonencode(var.configuration), "")
 
-      SLACK_BOT_TOKEN          = var.slack_bot_token
-      SLACK_APP_CONFIGURATION  = var.slack_app_configuration != null ? jsonencode(var.slack_app_configuration) : ""
-      DEFAULT_SLACK_CHANNEL_ID = var.default_slack_channel_id
+      SLACK_BOT_TOKEN          = try(var.slack_bot_token, "")
+      SLACK_APP_CONFIGURATION  = try(jsonencode(var.slack_app_configuration), "")
+      DEFAULT_SLACK_CHANNEL_ID = try(var.default_slack_channel_id, "")
 
-      DEFAULT_SNS_TOPIC_ARN = var.default_sns_topic_arn != null ? var.default_sns_topic_arn : length(var.aws_sns_topic_subscription_emails) > 0 ? aws_sns_topic.events_to_sns[0].arn : ""
-      SNS_CONFIGURATION     = var.sns_configuration != null ? jsonencode(var.sns_configuration) : ""
+      DEFAULT_SNS_TOPIC_ARN = try(aws_sns_topic.events_to_sns[0].arn, var.default_sns_topic_arn, "")
+      SNS_CONFIGURATION     = try(jsonencode(var.sns_configuration), "")
 
       RULES_SEPARATOR                 = var.rules_separator
       RULES                           = var.rules
@@ -35,7 +35,7 @@ module "lambda" {
       RULE_EVALUATION_ERRORS_TO_SLACK = var.rule_evaluation_errors_to_slack
 
       DYNAMODB_TIME_TO_LIVE = var.dynamodb_time_to_live
-      DYNAMODB_TABLE_NAME   = var.slack_bot_token != null ? module.cloudtrail_to_slack_dynamodb_table[0].dynamodb_table_id : ""
+      DYNAMODB_TABLE_NAME   = try(module.cloudtrail_to_slack_dynamodb_table[0].dynamodb_table_id, "")
     },
     var.use_default_rules ? { USE_DEFAULT_RULES = "True" } : {}
   )
