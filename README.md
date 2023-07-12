@@ -50,19 +50,18 @@ The module has three variants of notification delivery:
 
 - Offers additional features, such as consolidating duplicate events into a single message thread. More features may be added in the future.
 - The Slack app must have the `chat:write` permission.
+- [Terraform configuration example](https://github.com/fivexl/terraform-aws-cloudtrail-to-slack/blob/master/examples/slack_app_configuration/main.tf)
 
 ## Slack Webhook
 
 - Provides all the basic functionality of the module, but does not offer additional features and is not recommended by Slack.
+- [Terraform configuration example](https://github.com/fivexl/terraform-aws-cloudtrail-to-slack/blob/master/examples/slack_webhook_configuration/main.tf)
 
 ## AWS SNS
 
 - An optional feature that allows sending notifications to an AWS SNS topic. It can be used alongside either the Slack App or Slack Webhook.
 
 All three variants of notification delivery support separating notifications into different Slack channels or SNS topics based on event account ID.
-
-Complete Terraform examples can be found in the examples directory of this repository.
-
 
 # Rules
 
@@ -176,7 +175,7 @@ locals {
 
 # About processing Cloudtrail events
 
-CloudTrail event (see format [here](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference.html), or find more examples in src/tests/test_events.json) is flattened before processing and should be referenced as `event` variable
+CloudTrail event (see format [here](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference.html), or find more examples in [src/tests/test_events.json](https://github.com/fivexl/terraform-aws-cloudtrail-to-slack/blob/master/src/tests/test_events.json)) is flattened before processing and should be referenced as `event` variable
 So, for instance, to access ARN from the event below, you should use the notation `userIdentity.arn`
 
 ```json
