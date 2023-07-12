@@ -3,21 +3,18 @@
 <!--- Use Markdown All In One Visual Studio Code extension to refresh TOC -->
 - [Terraform module to deploy lambda that sends notifications about AWS CloudTrail events to Slack](#terraform-module-to-deploy-lambda-that-sends-notifications-about-aws-cloudtrail-events-to-slack)
   - [Why this module?](#why-this-module)
-  - [Example message](#example-message)
-  - [Delivery delays](#delivery-delays)
-- [Examples](#examples)
-  - [Module deployment with the default ruleset](#module-deployment-with-the-default-ruleset)
-  - [Separating notifications to different Slack channels](#separating-notifications-to-different-slack-channels)
-    - [Module deployment with the default ruleset and different slack channels for different accounts](#module-deployment-with-the-default-ruleset-and-different-slack-channels-for-different-accounts)
-  - [Tracking certain event types](#tracking-certain-event-types)
+    - [Example message](#example-message)
+- [Configurations](#configurations)
+  - [Slack App (Recommended)](#slack-app-recommended)
+  - [Slack Webhook](#slack-webhook)
+  - [AWS SNS](#aws-sns)
+- [Rules](#rules)
+  - [Default rules:](#default-rules)
   - [User defined rules to match events](#user-defined-rules-to-match-events)
-    - [Module deployment with user-defined rules, list of events to track, and default rule sets](#module-deployment-with-user-defined-rules-list-of-events-to-track-and-default-rule-sets)
-    - [Catch SSM Session events for the "111111111" account](#catch-ssm-session-events-for-the-111111111-account)
-  - [Ignore rules.](#ignore-rules)
-    - [Ignore events from the account "111111111".](#ignore-events-from-the-account-111111111)
-- [About rules and how they are applied](#about-rules-and-how-they-are-applied)
-  - [Default rules](#default-rules)
-  - [Ignore rules](#ignore-rules-1)
+  - [Events to track](#events-to-track)
+  - [Custom Separator for Rules](#custom-separator-for-rules)
+  - [Ignore Rules](#ignore-rules)
+- [About processing Cloudtrail events](#about-processing-cloudtrail-events)
 - [Terraform specs](#terraform-specs)
   - [Requirements](#requirements)
   - [Providers](#providers)
@@ -40,175 +37,111 @@ This module allows you to get notifications about:
 - define sophisticated rules to track user-defined conditions that are not covered by default rules (see examples below)
 - send notifications to different Slack channels based on event account id
 
-## Example message
+### Example message
 
 ![Example message](https://releases.fivexl.io/example_message.png)
 
-## Delivery delays
 
-The current implementation built upon parsing of S3 notifications, and thus you should expect a 5 to 10 min lag between action and event notification in Slack.
-If you do not get a notification at all - check CloudWatch logs for the lambda to see if there is any issue with provided filters.
+# Configurations
 
-# Examples
+The module has three variants of notification delivery:
 
-## Module deployment with the default ruleset
+## Slack App (Recommended)
 
-```hlc
-# we recomend storing hook url in SSM Parameter store and not commit it to the repo
-data "aws_ssm_parameter" "hook" {
-  name = "/cloudtrail-to-slack/hook"
-}
+- Offers additional features, such as consolidating duplicate events into a single message thread. More features may be added in the future.
+- The Slack app must have the `chat:write` permission.
 
-module "cloudtrail_to_slack" {
-  source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "3.1.1"
-  default_slack_hook_url         = data.aws_ssm_parameter.hook.value
-  cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
-}
+## Slack Webhook
 
-resource "aws_cloudtrail" "main" {
-  name           = "main"
-  s3_bucket_name = aws_s3_bucket.cloudtrail.id
-  ...
-}
+- Provides all the basic functionality of the module, but does not offer additional features and is not recommended by Slack.
 
-resource "aws_s3_bucket" "cloudtrail" {
-  ....
-}
+## AWS SNS
+
+- An optional feature that allows sending notifications to an AWS SNS topic. It can be used alongside either the Slack App or Slack Webhook.
+
+All three variants of notification delivery support separating notifications into different Slack channels or SNS topics based on event account ID.
+
+Complete Terraform examples can be found in the examples directory of this repository.
+
+
+# Rules
+
+Rules are python strings that are evaluated in the runtime and should return the bool value, if rule returns True, then notification will be sent to Slack.
+
+This module comes with a set of predefined rules (default rules) that users can take advantage of:
+
+## Default rules:
+
+```python
+# Notify if someone logged in without MFA but skip notification for SSO logins
+default_rules.append('event["eventName"] == "ConsoleLogin" '
+                     'and event.get("additionalEventData.MFAUsed", "") != "Yes" '
+                     'and "assumed-role/AWSReservedSSO" not in event.get("userIdentity.arn", "")')
+# Notify if someone is trying to do something they not supposed to be doing but do not notify
+# about not logged in actions since there are a lot of scans for open buckets that generate noise
+default_rules.append('event.get("errorCode", "").endswith(("UnauthorizedOperation"))')
+default_rules.append('event.get("errorCode", "").startswith(("AccessDenied"))'
+                     'and (event.get("userIdentity.accountId", "") != "ANONYMOUS_PRINCIPAL")')
+# Notify about all non-read actions done by root
+default_rules.append('event.get("userIdentity.type", "") == "Root" '
+                     'and not event["eventName"].startswith(("Get", "List", "Describe", "Head"))')
+
+# Catch CloudTrail disable events
+default_rules.append('event["eventSource"] == "cloudtrail.amazonaws.com" '
+                     'and event["eventName"] == "StopLogging"')
+default_rules.append('event["eventSource"] == "cloudtrail.amazonaws.com" '
+                     'and event["eventName"] == "UpdateTrail"')
+default_rules.append('event["eventSource"] == "cloudtrail.amazonaws.com" '
+                     'and event["eventName"] == "DeleteTrail"')
+# Catch cloudtrail to slack lambda changes
+default_rules.append('event["eventSource"] == "lambda.amazonaws.com" '
+                     'and "responseElements.functionName" in event '
+                     f'and event["responseElements.functionName"] == "{function_name}" '
+                     'and event["eventName"].startswith(("UpdateFunctionConfiguration"))')
+default_rules.append('event["eventSource"] == "lambda.amazonaws.com" '
+                     'and "responseElements.functionName" in event '
+                     f'and event["responseElements.functionName"] == "{function_name}" '
+                     'and event["eventName"].startswith(("UpdateFunctionCode"))')
 ```
 
-## Separating notifications to different Slack channels
+## User defined rules to match events
+Rules must be provided as a list of strings, each separated by a comma or a custom separator. Each string is a Python expression that will be evaluated at runtime. By default, the module will send rule evaluation errors to Slack, but you can disable this by setting 'rule_evaluation_errors_to_slack' to 'false'.
 
-### Module deployment with the default ruleset and different slack channels for different accounts
-
-```hlc
-# we recomend storing hook url in SSM Parameter store and not commit it to the repo
-data "aws_ssm_parameter" "default_hook" {
-  name = "/cloudtrail-to-slack/default_hook"
-}
-
-data "aws_ssm_parameter" "dev_hook" {
-  name = "/cloudtrail-to-slack/dev_hook"
-}
-
-data "aws_ssm_parameter" "prod_hook" {
-  name = "/cloudtrail-to-slack/prod_hook"
-}
-
-module "cloudtrail_to_slack" {
-  source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "3.1.1"
-  default_slack_hook_url         = data.aws_ssm_parameter.default_hook.value
-
-  configuration = [
-    {
-      "accounts": ["123456789"],
-      "slack_hook_url": data.aws_ssm_parameter.dev_hook.value
-    },
-    {
-      "accounts": ["987654321"],
-      "slack_hook_url": data.aws_ssm_parameter.prod_hook.value
-    }
+Example of user-defined rules:
+```hcl
+locals = {
+  rules = [
+    # Catch CloudTrail disable events
+    "event['eventSource'] == 'cloudtrail.amazonaws.com' and event['eventName'] == 'StopLogging'"
+    "event['eventSource'] == 'cloudtrail.amazonaws.com' and event['eventName'] == 'UpdateTrail'"
+    "event['eventSource'] == 'cloudtrail.amazonaws.com' and event['eventName'] == 'DeleteTrail'"
   ]
-
-  cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
-}
-
-resource "aws_cloudtrail" "main" {
-  name           = "main"
-  s3_bucket_name = aws_s3_bucket.cloudtrail.id
-  ...
-}
-
-resource "aws_s3_bucket" "cloudtrail" {
-  ....
+    rules = join(",", local.rules)
 }
 ```
 
-## Tracking certain event types
-
-Module deployment with the list of events to track and default rule sets
-
-```hlc
-# we recomend storing hook url in SSM Parameter store and not commit it to the repo
-data "aws_ssm_parameter" "hook" {
-  name = "/cloudtrail-to-slack/hook"
-}
-
-locals {
-  # CloudTrail events
-  cloudtrail = "DeleteTrail,StopLogging,UpdateTrail"
+## Events to track
+This is much simpler than rules. You just need a list of `eventNames` that you want to track. They will be evaluated as follows:
+```python
+f'"eventName" in event and event["eventName"] in {json.dumps(events_list)}'
+```
+Terraform example:
+```hcl
+local{
   # EC2 Instance connect and EC2 events
   ec2 = "SendSSHPublicKey"
   # Config
   config = "DeleteConfigRule,DeleteConfigurationRecorder,DeleteDeliveryChannel,DeleteEvaluationResults"
   # All events
-  events_to_track = "${local.cloudtrail},${local.ec2},${local.config}"
+  events_to_track = "${local.ec2},${local.config}"
 }
 
-module "cloudtrail_to_slack" {
-  source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "3.1.1"
-  default_slack_hook_url         = data.aws_ssm_parameter.hook.value
-  cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
-  events_to_track                = local.events_to_track
-}
-
-resource "aws_cloudtrail" "main" {
-  name           = "main"
-  s3_bucket_name = aws_s3_bucket.cloudtrail.id
-  ...
-}
-
-resource "aws_s3_bucket" "cloudtrail" {
-  ....
-}
+events_to_track = local.events_to_track
 ```
 
-## User defined rules to match events
+## Custom Separator for Rules
 
-### Module deployment with user-defined rules, list of events to track, and default rule sets
-
-```hlc
-# we recomend storing hook url in SSM Parameter store and not commit it to the repo
-data "aws_ssm_parameter" "hook" {
-  name = "/cloudtrail-to-slack/hook"
-}
-
-module "cloudtrail_to_slack" {
-  source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "3.1.1"
-  default_slack_hook_url         = data.aws_ssm_parameter.hook.value
-  cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
-  rules                          = "'errorCode' in event and event['errorCode'] == 'UnauthorizedOperation','userIdentity.type' in event and event['userIdentity.type'] == 'Root'"
-  events_to_track                = "CreateUser,StartInstances"
-}
-```
-
-### Catch SSM Session events for the "111111111" account
-
-```hcl
-# Important! User defined rules should not contain comas since they are passed to lambda as coma separated string
-locals {
-  cloudtrail_rules = [
-      "'userIdentity.accountId' in event and event['userIdentity.accountId'] == '11111111111' and event['eventSource'] == 'ssm.amazonaws.com' and event['eventName'].endswith(('Session'))",
-    ]
-}
-
-# we recomend storing hook url in SSM Parameter store and not commit it to the repo
-data "aws_ssm_parameter" "hook" {
-  name = "/cloudtrail-to-slack/hook"
-}
-
-module "cloudtrail_to_slack" {
-  source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "3.1.1"
-  default_slack_hook_url         = data.aws_ssm_parameter.hook.value
-  cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
-  rules                          = join(",", local.cloudtrail_rules)
-}
-```
-### Using a custom separator for complex rules containing commas
+By default, the module expects rules to be separated by commas. However, if you have complex rules that contain commas, you can use a custom separator by providing the `rules_separator` variable. Here's how:
 
 ```hcl
 locals {
@@ -219,45 +152,31 @@ locals {
 }
 
 module "cloudtrail_to_slack" {
-      ...
-  rules           = join(local.custom_separator, local.cloudtrail_rules)
+  ...
+  rules = join(local.custom_separator, local.cloudtrail_rules)
   rules_separator = local.custom_separator
 }
 ```
 
-## Ignore rules.
+## Ignore Rules
 
-### Ignore events from the account "111111111".
+**Note:** We recommend addressing alerts rather than ignoring them. However, if it's impossible to resolve an alert, you can suppress events by providing ignore rules.
 
-Note! We do recomend fixing alerts instead of ignoring them. But if there is no way you can fix it then there is a way to suppress events by providing ignore rules
+Ignore rules have the same format as the rules, but they are evaluated before them. So, if an ignore rule returns `True`, then the event will be ignored and no further processing will be done.
 
 ```hcl
-# Important! User defined rules should not contain comas since they are passed to lambda as coma separated string
 locals {
-  cloudtrail_ignore_rules = [
-      "'userIdentity.accountId' in event and event['userIdentity.accountId'] == '11111111111'",
-    ]
-}
-
-# we recomend storing hook url in SSM Parameter store and not commit it to the repo
-data "aws_ssm_parameter" "hook" {
-  name = "/cloudtrail-to-slack/hook"
-}
-
-module "cloudtrail_to_slack" {
-  source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "2.3.0"
-  default_slack_hook_url         = data.aws_ssm_parameter.hook.value
-  cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
-  ignore_rules                   = join(",", local.cloudtrail_ignore_rules)
+  ignore_rules = [
+    # Ignore events from the account "111111111".
+    "'userIdentity.accountId' in event and event['userIdentity.accountId'] == '11111111111'",
+  ]
+  ignore_rules = join(",", local.ignore_rules)
 }
 ```
 
-# About rules and how they are applied
+# About processing Cloudtrail events
 
-This module comes with a set of predefined rules (default rules) that users can take advantage of.
-Rules are python strings that are evaluated in the runtime and should return the bool value.
-CloudTrail event (see format [here](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference.html)) is flattened before processing and should be referenced as `event` variable
+CloudTrail event (see format [here](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference.html), or find more examples in src/tests/test_events.json) is flattened before processing and should be referenced as `event` variable
 So, for instance, to access ARN from the event below, you should use the notation `userIdentity.arn`
 
 ```json
@@ -290,36 +209,6 @@ So, for instance, to access ARN from the event below, you should use the notatio
   "recipientAccountId": "XXXXXXXXXXX"
 }
 ```
-
-## Default rules
-
-```python
-# Notify if someone logged in without MFA but skip notification for SSO logins
-default_rules.append('event["eventName"] == "ConsoleLogin" ' +
-                     'and event["additionalEventData.MFAUsed"] != "Yes" ' +
-                     'and "assumed-role/AWSReservedSSO" not in event.get("userIdentity.arn", "")')
-
-# Notify if someone is trying to do something they not supposed to be doing but do not notify
-# about not logged in actions since there are a lot of scans for open buckets that generate noise
-# This is useful to discover any misconfigurations in your account. Time to time services will try
-# to do something but fail due to IAM permissions and those errors are very hard to find using
-# other means
-default_rules.append('event.get("errorCode", "").endswith(("UnauthorizedOperation"))')
-default_rules.append('event.get("errorCode", "").startswith(("AccessDenied"))' +
-                     'and (event.get("userIdentity.accountId", "") != "ANONYMOUS_PRINCIPAL")')
-
-# Notify about all non-read actions done by root
-default_rules.append('event.get("userIdentity.type", "") == "Root" ' +
-                     'and not event["eventName"].startswith(("Get", "List", "Describe", "Head"))')
-```
-
-## Ignore rules
-
-User can also provide ignore rules. Ignore rules have the same syntax as a default and user defined rules mentioned above.
-But instead of generating message to Slack on match those rules will cause lambda to ignore an event.
-Ignore rules tested before default and user defined rules which means that if even is ignored by ignore rules it will not be
-tested with any other rules.
-
 # Terraform specs
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
