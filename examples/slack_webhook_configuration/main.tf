@@ -11,12 +11,13 @@ provider "aws" {
 resource "aws_cloudtrail" "main" {
   name           = "main"
   s3_bucket_name = aws_s3_bucket.cloudtrail.id
-  ....
+  // Add other required arguments and block definitions for the CloudTrail resource
 }
 
 resource "aws_s3_bucket" "cloudtrail" {
-  ....
+  // Add required arguments and block definitions for the S3 bucket resource
 }
+
 
 # We recommend storing the bot token in the SSM Parameter Store and not committing it to the repo. 
 # Only one is required, but if there are more, it allows for sending notifications to different channels 
