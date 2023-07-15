@@ -3,9 +3,9 @@ name: 'base'
 on:
   push:
     tags: [ v* ]
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   python-job:
