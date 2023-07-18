@@ -1,9 +1,0 @@
-[tool.pyright]
-reportGeneralTypeIssues = true
-
-[tool.pytest.ini_options]
-minversion = "6.0"
-addopts = "-ra -q"
-testpaths = ["src/tests"]
-xfail_strict = true
-filterwarnings = []

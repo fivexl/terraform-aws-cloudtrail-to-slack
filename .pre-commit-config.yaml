@@ -1,10 +1,50 @@
 repos:
-- repo: git://github.com/antonbabenko/pre-commit-terraform
-  rev: v1.52.0
+# Terraform
+- repo: https://github.com/antonbabenko/pre-commit-terraform
+  rev: v1.77.2
   hooks:
     - id: terraform_fmt
     - id: terraform_tflint
     - id: terraform_validate
     - id: terraform_docs
     - id: terraform_tfsec
-    - id: checkov
+# Python
+-   repo: local
+    hooks:
+    # NOTE: we make `black` a local hook because if it's installed from
+    # PyPI (rather than from source) then it'll run twice as fast thanks to mypyc
+    -   id: black
+        name: black
+        description: "Black: The uncompromising Python code formatter"
+        entry: black
+        language: python
+        require_serial: true
+        types_or: [python, pyi]
+        additional_dependencies: [black==23.1.0]
+-   repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.0.259
+    hooks:
+    -   id: ruff
+        args: [--exit-non-zero-on-fix]
+-   repo: https://github.com/codespell-project/codespell
+    rev: v2.2.2
+    hooks:
+    -   id: codespell
+        types_or: [python, rst, markdown, cython, c]
+        additional_dependencies: [tomli]
+-   repo: local
+    hooks:
+        # This pre-commit hook is used to automatically generate a deploy_requirements.txt file from the current Poetry dependencies.
+    -   id: poetry-export-deploy-requirements-src
+        name: Export dependencies with Poetry for src
+        entry: bash -c 'cd src && poetry export -f requirements.txt --output deploy_requirements.txt && git diff --exit-code deploy_requirements.txt || git add deploy_requirements.txt'
+        language: system
+        files: src/pyproject.toml$
+        pass_filenames: false
+        # Generate requirements.txt for git-ci
+    -   id: poetry-export-git-ci-requirements
+        name: Export dependencies with Poetry for git-ci
+        entry: bash -c 'cd src && poetry export --with git_ci  -f requirements.txt --output requirements.txt && git diff --exit-code requirements.txt || git add requirements.txt'
+        language: system
+        files: src/pyproject.toml$
+        pass_filenames: false

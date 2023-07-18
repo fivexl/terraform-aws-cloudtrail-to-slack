@@ -9,7 +9,21 @@ module "lambda" {
   timeout       = var.lambda_timeout_seconds
   publish       = true
 
-  source_path = "${path.module}/src/"
+  source_path = [
+    {
+      path             = "${path.module}/src/"
+      pip_requirements = "${path.module}/src/deploy_requirements.txt"
+      artifacts_dir    = "${path.root}/builds/"
+      patterns = [
+        "!.venv/.*",
+        "!.vscode/.*",
+        "!__pycache__/.*",
+        "!tests/.*",
+        "!tools/.*",
+        "!.pytest_cache/.*",
+      ]
+    }
+  ]
 
   recreate_missing_package = var.lambda_recreate_missing_package
 
