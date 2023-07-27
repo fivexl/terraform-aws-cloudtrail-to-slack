@@ -44,7 +44,7 @@ repos:
         # Generate requirements.txt for git-ci
     -   id: poetry-export-git-ci-requirements
         name: Export dependencies with Poetry for git-ci
-        entry: bash -c 'cd src && poetry export --with git_ci  -f requirements.txt --output requirements.txt && git diff --exit-code requirements.txt || git add requirements.txt'
+        entry: bash -c 'cd src && poetry export --with dev  -f requirements.txt --output requirements.txt && git diff --exit-code requirements.txt || git add requirements.txt'
         language: system
         files: src/pyproject.toml$
         pass_filenames: false

@@ -19,11 +19,6 @@ boto3 = "^1.26.97"
 ruff = "^0.0.267"
 slack-sdk = "^3.21.3"
 
-# # Dependencies listed below are used for testing in github actions.
-[tool.poetry.group.git_ci.dependencies]
-slack-sdk = "^3.21.3"
-boto3 = "^1.26.97"
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
