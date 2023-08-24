@@ -19,7 +19,7 @@ def post_message( # noqa: ANN201
 ) -> None | SlackResponse:
 
     if isinstance(slack_config, SlackAppConfig):
-        if account_id:
+        if account_id and slack_config.configuration:
             channel_id = next(
                 (cfg["slack_channel_id"] for cfg in slack_config.configuration if account_id in cfg["accounts"]), # noqa: E501
                 slack_config.default_channel_id
@@ -34,7 +34,7 @@ def post_message( # noqa: ANN201
         )
 
     if isinstance(slack_config, SlackWebhookConfig):
-        if account_id:
+        if account_id and slack_config.configuration:
             hook_url = next(
                 (cfg["slack_hook_url"] for cfg in slack_config.configuration if account_id in cfg["accounts"]), # noqa: E501
                 slack_config.default_hook_url
