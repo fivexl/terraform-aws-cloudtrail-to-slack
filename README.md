@@ -208,6 +208,36 @@ So, for instance, to access ARN from the event below, you should use the notatio
   "recipientAccountId": "XXXXXXXXXXX"
 }
 ```
+# Slack App configuration:
+1. Go to https://api.slack.com/
+2. Click create an app
+3. Click From an app manifest
+4. Select workspace, click next
+5. Choose yaml for app manifest format
+```
+display_information:
+  name: CloudtrailToSlack
+  description: Notifications about Cloudtrail events to Slack.
+  background_color: "#3d3d0e"
+features:
+  bot_user:
+    display_name: Cloudtrail to Slack
+    always_online: false
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
+```
+6. Check permissions and click create
+7. Click install to workspace
+8. Copy Signing Secret # for slack_signing_secret module input
+9. Copy Bot User OAuth Token # for slack_bot_token module input
+
+
 # Terraform specs
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
