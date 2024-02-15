@@ -321,3 +321,8 @@ settings:
 ## License
 
 Apache 2 Licensed. See LICENSE for full details.
+
+## Weekly review link
+
+- [Review](https://github.com/fivexl/terraform-aws-cloudtrail-to-slack/compare/main@%7B7day%7D...main)
+- [Review branch-based review](https://github.com/fivexl/terraform-aws-cloudtrail-to-slack/compare/review...main)
