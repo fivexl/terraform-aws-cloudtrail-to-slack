@@ -14,7 +14,7 @@ slack-sdk = "^3.21.3"
 [tool.poetry.group.dev.dependencies]
 python = "^3.10.10"
 pytest = "^7.2.2"
-black = "^23.1.0"
+black = "^24.3.0"
 boto3 = "^1.26.97"
 ruff = "^0.0.267"
 slack-sdk = "^3.21.3"
