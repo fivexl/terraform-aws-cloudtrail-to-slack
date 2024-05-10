@@ -67,6 +67,8 @@ module "lambda" {
   tags = var.tags
 }
 
+data "aws_partition" "current" {}
+
 data "aws_iam_policy_document" "s3" {
   statement {
     sid = "AllowLambdaToGetObjects"
@@ -87,7 +89,7 @@ data "aws_iam_policy_document" "s3" {
       "dynamodb:GetItem",
     ]
     resources = [
-      "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.dynamodb_table_name}"
+      "arn:${data.aws_partition.current.partition}:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.dynamodb_table_name}"
     ]
   }
   dynamic "statement" {
