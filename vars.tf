@@ -204,3 +204,9 @@ variable "dynamodb_time_to_live" {
   default     = 900
   type        = number
 }
+
+variable "enable_bucket_notification" {
+  type        = bool
+  default     = true
+  description = "Enable bucket notification for CloudTrail logs or assume that it is managed outside of this module."
+}

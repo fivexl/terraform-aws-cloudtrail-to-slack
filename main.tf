@@ -163,6 +163,7 @@ resource "aws_lambda_permission" "s3" {
 }
 
 resource "aws_s3_bucket_notification" "bucket_notification" {
+  count  = var.enable_bucket_notification ? 1 : 0
   bucket = data.aws_s3_bucket.cloudtrail.id
 
   lambda_function {
