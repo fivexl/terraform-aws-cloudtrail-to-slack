@@ -38,6 +38,7 @@ slack_config = get_slack_config()
 s3_client = boto3.client("s3")
 dynamodb_client = boto3.client("dynamodb")
 sns_client = boto3.client("sns")
+cloudwatch_client = boto3.client("cloudwatch")
 
 
 def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # noqa: ANN001
@@ -163,6 +164,31 @@ def should_message_be_processed(
     logger.info({"Event did not match any rules and will not be processed": {"event": event_name, "user": user}}) # noqa: E501
     return ProcessingResult(False, errors)
 
+def push_cloudwatch_metrics(deny_type: str, event_name: str) -> None:
+    """Pushes CloudWatch metrics: one for all AccessDenied events, and one grouped by event name."""
+    metrics = [
+        {
+            "MetricName": "TotalAccessDeniedEvents",
+            "Dimensions": [{"Name": "AccessDenied", "Value": "AccessDeniedTotal"}],
+            "Value": 1,
+            "Unit": "Count"
+        },
+        {
+            "MetricName": "AccessDeniedByEvent",
+            "Dimensions": [
+                {"Name": "DenyType", "Value": deny_type},
+                {"Name": "EventName", "Value": event_name}
+            ],
+            "Value": 1,
+            "Unit": "Count"
+        }
+    ]
+    try:
+        cloudwatch_client.put_metric_data(Namespace="CloudTrail/AccessDeniedEvents", MetricData=metrics)
+        logger.info("Pushed CloudWatch metrics", extra={"deny_type": deny_type, "event_name": event_name})
+    except Exception as e:
+        logger.exception("Failed to push CloudWatch metrics", extra={"error": e, "deny_type": deny_type, "event_name": event_name})
+
 
 def handle_event(
     event: Dict[str, Any],
@@ -192,6 +218,8 @@ def handle_event(
     if ("errorCode" in event and "AccessDenied" in event["errorCode"]):
         event_as_string = json.dumps(event, indent=4)
         logger.info({"errorCode": "AccessDenied", "log full event": event_as_string})
+         # Push CloudWatch metrics
+        push_cloudwatch_metrics(deny_type=event["errorCode"], event_name=event.get("eventName", "UnknownEvent"))
 
     message = event_to_slack_message(event, source_file_object_key, account_id)
 
