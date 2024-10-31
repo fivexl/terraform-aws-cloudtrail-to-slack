@@ -93,14 +93,14 @@ data "aws_iam_policy_document" "s3" {
     ]
   }
   statement {
-      sid = "AllowLambdaToPushCloudWatchMetrics"
-  
-      actions = [
-        "cloudwatch:PutMetricData",
-      ]
-      resources = [
-        "*"
-      ]
+    sid = "AllowLambdaToPushCloudWatchMetrics"
+
+    actions = [
+      "cloudwatch:PutMetricData",
+    ]
+    resources = [
+      "*"
+    ]
   }
   dynamic "statement" {
     for_each = length(aws_sns_topic.events_to_sns) > 0 ? [1] : []
