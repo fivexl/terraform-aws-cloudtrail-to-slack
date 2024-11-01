@@ -212,15 +212,15 @@ def handle_event(
                 slack_config=slack_config,
             )
 
-    if not result.should_be_processed:
-        return
-
     # log full event if it is AccessDenied
     if "errorCode" in event and "AccessDenied" in event["errorCode"]:
         event_as_string = json.dumps(event, indent=4)
         logger.info({"errorCode": "AccessDenied", "log full event": event_as_string})
         # Push CloudWatch metrics
         push_cloudwatch_metrics(deny_type=event["errorCode"], event_name=event.get("eventName", "UnknownEvent"))
+
+    if not result.should_be_processed:
+        return
 
     message = event_to_slack_message(event, source_file_object_key, account_id)
 
