@@ -92,6 +92,16 @@ data "aws_iam_policy_document" "s3" {
       "arn:${data.aws_partition.current.partition}:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.dynamodb_table_name}"
     ]
   }
+  statement {
+    sid = "AllowLambdaToPushCloudWatchMetrics"
+
+    actions = [
+      "cloudwatch:PutMetricData",
+    ]
+    resources = [
+      "*"
+    ]
+  }
   dynamic "statement" {
     for_each = length(aws_sns_topic.events_to_sns) > 0 ? [1] : []
     content {
