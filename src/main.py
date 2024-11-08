@@ -180,7 +180,7 @@ def push_total_access_denied_events_cloudwatch_metric() -> None:
     ]
     try:
         cloudwatch_client.put_metric_data(Namespace="CloudTrailToSlack/AccessDeniedEvents", MetricData=metrics)
-        logger.info("Pushed TotalAccessDeniedEvents CloudWatch metric")
+        logger.info({"Pushed TotalAccessDeniedEvents CloudWatch metric"})
     except Exception as e:
         logger.exception("Failed to push CloudWatch metrics", extra={"error": e})
 
@@ -197,7 +197,7 @@ def push_total_ignored_access_denied_events_cloudwatch_metric() -> None:
     ]
     try:
         cloudwatch_client.put_metric_data(Namespace="CloudTrailToSlack/AccessDeniedEvents", MetricData=metrics)
-        logger.info("Pushed TotalIgnoredAccessDeniedEvents CloudWatch metric")
+        logger.info({"Pushed TotalIgnoredAccessDeniedEvents CloudWatch metric"})
     except Exception as e:
         logger.exception("Failed to push CloudWatch metrics", extra={"error": e})
 
