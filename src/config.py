@@ -66,6 +66,7 @@ class Config:
 
         self.dynamodb_table_name: str | None = os.environ.get("DYNAMODB_TABLE_NAME")
         self.dynamodb_time_to_live: int = int(os.environ.get("DYNAMODB_TIME_TO_LIVE", 900))
+        self.push_access_denied_cloudwatch_metrics: bool = os.environ.get("PUSH_ACCESS_DENIED_CLOUDWATCH_METRICS") # type: ignore # noqa: PGH003, E501
 
         self.rules = []
         if self.use_default_rules:

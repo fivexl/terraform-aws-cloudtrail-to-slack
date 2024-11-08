@@ -204,3 +204,9 @@ variable "dynamodb_time_to_live" {
   default     = 900
   type        = number
 }
+
+variable "push_access_denied_cloudwatch_metrics" {
+  description = "If true, CloudWatch metrics will be pushed for all access denied events, including events ignored by rules."
+  type        = bool
+  default     = true
+}
