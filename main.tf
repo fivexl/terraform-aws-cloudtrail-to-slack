@@ -50,6 +50,8 @@ module "lambda" {
 
       DYNAMODB_TIME_TO_LIVE = var.dynamodb_time_to_live
       DYNAMODB_TABLE_NAME   = try(module.cloudtrail_to_slack_dynamodb_table[0].dynamodb_table_id, "")
+
+      PUSH_ACCESS_DENIED_CLOUDWATCH_METRICS = var.push_access_denied_cloudwatch_metrics
     },
     var.use_default_rules ? { USE_DEFAULT_RULES = "True" } : {}
   )

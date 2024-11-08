@@ -168,8 +168,8 @@ def should_message_be_processed(
     return ProcessingResult(False, errors)
 
 
-def push_cloudwatch_metrics(deny_type: str, event_name: str) -> None:
-    """Pushes CloudWatch metrics: one for all AccessDenied events, and one grouped by event name."""
+def push_total_access_denied_events_cloudwatch_metric() -> None:
+    """Pushes CloudWatch metrics for all AccessDenied events."""
     metrics = [
         {
             "MetricName": "TotalAccessDeniedEvents",
@@ -177,18 +177,29 @@ def push_cloudwatch_metrics(deny_type: str, event_name: str) -> None:
             "Value": 1,
             "Unit": "Count",
         },
+    ]
+    try:
+        cloudwatch_client.put_metric_data(Namespace="CloudTrailToSlack/AccessDeniedEvents", MetricData=metrics)
+        logger.info("Pushed TotalAccessDeniedEvents CloudWatch metric")
+    except Exception as e:
+        logger.exception("Failed to push CloudWatch metrics", extra={"error": e})
+
+
+def push_total_ignored_access_denied_events_cloudwatch_metric() -> None:
+    """Pushes CloudWatch metrics for ignored AccessDenied events only."""
+    metrics = [
         {
-            "MetricName": "AccessDeniedByEvent",
-            "Dimensions": [{"Name": "DenyType", "Value": deny_type}, {"Name": "EventName", "Value": event_name}],
+            "MetricName": "TotalIgnoredAccessDeniedEvents",
+            "Dimensions": [{"Name": "AccessDenied", "Value": "IgnoredAccessDeniedTotal"}],
             "Value": 1,
             "Unit": "Count",
         },
     ]
     try:
-        cloudwatch_client.put_metric_data(Namespace="CloudTrail/AccessDeniedEvents", MetricData=metrics)
-        logger.info("Pushed CloudWatch metrics", extra={"deny_type": deny_type, "event_name": event_name})
+        cloudwatch_client.put_metric_data(Namespace="CloudTrailToSlack/AccessDeniedEvents", MetricData=metrics)
+        logger.info("Pushed TotalIgnoredAccessDeniedEvents CloudWatch metric")
     except Exception as e:
-        logger.exception("Failed to push CloudWatch metrics", extra={"error": e, "deny_type": deny_type, "event_name": event_name})
+        logger.exception("Failed to push CloudWatch metrics", extra={"error": e})
 
 
 def handle_event(
@@ -212,14 +223,13 @@ def handle_event(
                 slack_config=slack_config,
             )
 
-    # log full event if it is AccessDenied
-    if "errorCode" in event and "AccessDenied" in event["errorCode"]:
-        event_as_string = json.dumps(event, indent=4)
-        logger.info({"errorCode": "AccessDenied", "log full event": event_as_string})
-        # Push CloudWatch metrics
-        push_cloudwatch_metrics(deny_type=event["errorCode"], event_name=event.get("eventName", "UnknownEvent"))
+    if "errorCode" in event and "AccessDenied" in event["errorCode"] and cfg.push_access_denied_cloudwatch_metrics is True:
+        push_total_access_denied_events_cloudwatch_metric()
 
     if not result.should_be_processed:
+        if "errorCode" in event and "AccessDenied" in event["errorCode"] and cfg.push_access_denied_cloudwatch_metrics is True:
+            push_total_ignored_access_denied_events_cloudwatch_metric()
+            return
         return
 
     message = event_to_slack_message(event, source_file_object_key, account_id)
