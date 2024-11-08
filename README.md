@@ -275,6 +275,7 @@ settings:
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
 | [aws_iam_policy_document.s3](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_kms_key.cloudtrail](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/kms_key) | data source |
+| [aws_partition.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/partition) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
 | [aws_s3_bucket.cloudtrail](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/s3_bucket) | data source |
 
@@ -300,6 +301,7 @@ settings:
 | <a name="input_lambda_recreate_missing_package"></a> [lambda\_recreate\_missing\_package](#input\_lambda\_recreate\_missing\_package) | Description: Whether to recreate missing Lambda package if it is missing locally or not | `bool` | `true` | no |
 | <a name="input_lambda_timeout_seconds"></a> [lambda\_timeout\_seconds](#input\_lambda\_timeout\_seconds) | Controls lambda timeout setting. | `number` | `30` | no |
 | <a name="input_log_level"></a> [log\_level](#input\_log\_level) | Log level for lambda function | `string` | `"INFO"` | no |
+| <a name="input_push_access_denied_cloudwatch_metrics"></a> [push\_access\_denied\_cloudwatch\_metrics](#input\_push\_access\_denied\_cloudwatch\_metrics) | If true, CloudWatch metrics will be pushed for all access denied events, including events ignored by rules. | `bool` | `true` | no |
 | <a name="input_rule_evaluation_errors_to_slack"></a> [rule\_evaluation\_errors\_to\_slack](#input\_rule\_evaluation\_errors\_to\_slack) | If rule evaluation error occurs, send notification to slack | `bool` | `true` | no |
 | <a name="input_rules"></a> [rules](#input\_rules) | Comma-separated list of rules to track events if just event name is not enough | `string` | `""` | no |
 | <a name="input_rules_separator"></a> [rules\_separator](#input\_rules\_separator) | Custom rules separator. Can be used if there are commas in the rules | `string` | `","` | no |
