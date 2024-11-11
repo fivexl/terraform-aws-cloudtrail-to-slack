@@ -170,6 +170,7 @@ def should_message_be_processed(
 
 def push_total_access_denied_events_cloudwatch_metric() -> None:
     """Pushes CloudWatch metrics for all AccessDenied events."""
+    logger.info({"Pushing TotalAccessDeniedEvents CloudWatch metric"})
     metrics = [
         {
             "MetricName": "TotalAccessDeniedEvents",
@@ -182,11 +183,12 @@ def push_total_access_denied_events_cloudwatch_metric() -> None:
         cloudwatch_client.put_metric_data(Namespace="CloudTrailToSlack/AccessDeniedEvents", MetricData=metrics)
         logger.info({"Pushed TotalAccessDeniedEvents CloudWatch metric"})
     except Exception as e:
-        logger.exception("Failed to push CloudWatch metrics", extra={"error": e})
+        logger.exception({"Failed to push CloudWatch metrics": {"error": e}})
 
 
 def push_total_ignored_access_denied_events_cloudwatch_metric() -> None:
     """Pushes CloudWatch metrics for ignored AccessDenied events only."""
+    logger.info({"Pushing TotalIgnoredAccessDeniedEvents CloudWatch metric"})
     metrics = [
         {
             "MetricName": "TotalIgnoredAccessDeniedEvents",
@@ -199,7 +201,7 @@ def push_total_ignored_access_denied_events_cloudwatch_metric() -> None:
         cloudwatch_client.put_metric_data(Namespace="CloudTrailToSlack/AccessDeniedEvents", MetricData=metrics)
         logger.info({"Pushed TotalIgnoredAccessDeniedEvents CloudWatch metric"})
     except Exception as e:
-        logger.exception("Failed to push CloudWatch metrics", extra={"error": e})
+        logger.exception({"Failed to push CloudWatch metrics": {"error": e}})
 
 
 def handle_event(
@@ -226,7 +228,7 @@ def handle_event(
     if "errorCode" in event and "AccessDenied" in event["errorCode"] and cfg.push_access_denied_cloudwatch_metrics is True:
         push_total_access_denied_events_cloudwatch_metric()
 
-    if not result.should_be_processed:
+    if result.should_be_processed is False:
         if "errorCode" in event and "AccessDenied" in event["errorCode"] and cfg.push_access_denied_cloudwatch_metrics is True:
             push_total_ignored_access_denied_events_cloudwatch_metric()
             return
