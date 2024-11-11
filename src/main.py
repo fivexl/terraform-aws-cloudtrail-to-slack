@@ -216,6 +216,7 @@ def handle_event(
     ignore_rules: List[str],
 ) -> SlackResponse | None:
     logger.debug({"Raw event": json.dumps(event)})
+    logger.debug({"Cfg": json.dumps(cfg.__dict__)})
     result = should_message_be_processed(event, rules, ignore_rules)
     account_id = event["userIdentity"]["accountId"] if "accountId" in event["userIdentity"] else ""
     if cfg.rule_evaluation_errors_to_slack:
@@ -233,7 +234,7 @@ def handle_event(
     logger.debug({"Processing result": {"result":result}})
 
     if flatten_json(event).get("errorCode", "").startswith(("AccessDenied")):
-        logger.info({"Event is AccessDenied": event})
+        logger.info({"Event is AccessDenied"})
         if cfg.push_access_denied_cloudwatch_metrics is True:
             logger.info({"Pushing AccessDenied CloudWatch metrics"})
             push_total_access_denied_events_cloudwatch_metric()
