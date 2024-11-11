@@ -231,7 +231,7 @@ def handle_event(
             )
 
     logger.debug({"Processing result": {"result":result}})
-    is_event_access_denied = ("errorCode" in event) and ("AccessDenied" in event["errorCode"]) and (cfg.push_access_denied_cloudwatch_metrics is True)
+    is_event_access_denied = (event.get("errorCode", "").startswith(("AccessDenied"))) and (cfg.push_access_denied_cloudwatch_metrics is True)
     logger.debug({"Is event an access denied event": {"bool": is_event_access_denied}})
 
     if is_event_access_denied:
