@@ -225,11 +225,11 @@ def handle_event(
                 slack_config=slack_config,
             )
 
-    if "errorCode" in event and "AccessDenied" in event["errorCode"] and cfg.push_access_denied_cloudwatch_metrics is True:
+    if ("errorCode" in event) and ("AccessDenied" in event["errorCode"]) and (cfg.push_access_denied_cloudwatch_metrics is True):
         push_total_access_denied_events_cloudwatch_metric()
 
     if result.should_be_processed is False:
-        if "errorCode" in event and "AccessDenied" in event["errorCode"] and cfg.push_access_denied_cloudwatch_metrics is True:
+        if ("errorCode" in event) and ("AccessDenied" in event["errorCode"]) and (cfg.push_access_denied_cloudwatch_metrics is True):
             push_total_ignored_access_denied_events_cloudwatch_metric()
             return
         return
