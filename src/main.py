@@ -230,9 +230,9 @@ def handle_event(
                 slack_config=slack_config,
             )
 
-    logger.debug({"Processing result": result})
+    logger.debug({"Processing result": {"result":result}})
     is_event_access_denied = ("errorCode" in event) and ("AccessDenied" in event["errorCode"]) and (cfg.push_access_denied_cloudwatch_metrics is True)
-    logger.debug({"Is event an access denied event": {is_event_access_denied}})
+    logger.debug({"Is event an access denied event": {"bool": is_event_access_denied}})
 
     if is_event_access_denied:
         push_total_access_denied_events_cloudwatch_metric()
