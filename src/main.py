@@ -130,6 +130,7 @@ def get_cloudtrail_log_records(record: Dict) -> Dict | None:
 class ProcessingResult(NamedTuple):
     should_be_processed: bool
     errors: List[Dict[str, Any]]
+    is_ignored: bool = False
 
 
 def should_message_be_processed(
@@ -150,7 +151,11 @@ def should_message_be_processed(
                 logger.info(
                     {"Event matched ignore rule and will not be processed": {"ignore_rule": ignore_rule, "flat_event": flat_event}}
                 )  # noqa: E501
-                return ProcessingResult(False, errors)
+                return ProcessingResult(
+                    should_be_processed=False,
+                    errors=errors,
+                    is_ignored=True
+                    )
         except Exception as e:
             logger.exception({"Event parsing failed": {"error": e, "ignore_rule": ignore_rule, "flat_event": flat_event}})  # noqa: E501
             errors.append({"error": e, "rule": ignore_rule})
@@ -225,13 +230,16 @@ def handle_event(
                 slack_config=slack_config,
             )
 
-    if ("errorCode" in event) and ("AccessDenied" in event["errorCode"]) and (cfg.push_access_denied_cloudwatch_metrics is True):
+    logger.debug({"Processing result": result})
+    is_event_access_denied = ("errorCode" in event) and ("AccessDenied" in event["errorCode"]) and (cfg.push_access_denied_cloudwatch_metrics is True)
+    logger.debug({"Is event an access denied event": {is_event_access_denied}})
+
+    if is_event_access_denied:
         push_total_access_denied_events_cloudwatch_metric()
+        if result.is_ignored:
+            push_total_ignored_access_denied_events_cloudwatch_metric()
 
     if result.should_be_processed is False:
-        if ("errorCode" in event) and ("AccessDenied" in event["errorCode"]) and (cfg.push_access_denied_cloudwatch_metrics is True):
-            push_total_ignored_access_denied_events_cloudwatch_metric()
-            return
         return
 
     message = event_to_slack_message(event, source_file_object_key, account_id)
