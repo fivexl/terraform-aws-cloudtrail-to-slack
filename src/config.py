@@ -98,6 +98,8 @@ class JsonFormatter(logging.Formatter):
 
         if isinstance(record.msg, dict):
             log_entry.update(record.msg)
+        if isinstance(record.msg, str):
+            log_entry["message"] = record.msg
 
         return json.dumps(log_entry)
 

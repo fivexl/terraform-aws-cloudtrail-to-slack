@@ -175,7 +175,7 @@ def should_message_be_processed(
 
 def push_total_access_denied_events_cloudwatch_metric() -> None:
     """Pushes CloudWatch metrics for all AccessDenied events."""
-    logger.info({"Info":"Pushing TotalAccessDeniedEvents CloudWatch metric"})
+    logger.info("Pushing TotalAccessDeniedEvents CloudWatch metric")
     metrics = [
         {
             "MetricName": "TotalAccessDeniedEvents",
@@ -186,14 +186,14 @@ def push_total_access_denied_events_cloudwatch_metric() -> None:
     ]
     try:
         cloudwatch_client.put_metric_data(Namespace="CloudTrailToSlack/AccessDeniedEvents", MetricData=metrics)
-        logger.info({"Info":"Pushed TotalAccessDeniedEvents CloudWatch metric"})
+        logger.info("Pushed TotalAccessDeniedEvents CloudWatch metric")
     except Exception as e:
         logger.exception({"Failed to push CloudWatch metrics": {"error": e}})
 
 
 def push_total_ignored_access_denied_events_cloudwatch_metric() -> None:
     """Pushes CloudWatch metrics for ignored AccessDenied events only."""
-    logger.info({"Info":"Pushing TotalIgnoredAccessDeniedEvents CloudWatch metric"})
+    logger.info("Pushing TotalIgnoredAccessDeniedEvents CloudWatch metric")
     metrics = [
         {
             "MetricName": "TotalIgnoredAccessDeniedEvents",
@@ -204,7 +204,7 @@ def push_total_ignored_access_denied_events_cloudwatch_metric() -> None:
     ]
     try:
         cloudwatch_client.put_metric_data(Namespace="CloudTrailToSlack/AccessDeniedEvents", MetricData=metrics)
-        logger.info({"Info": "Pushed TotalIgnoredAccessDeniedEvents CloudWatch metric"})
+        logger.info("Pushed TotalIgnoredAccessDeniedEvents CloudWatch metric")
     except Exception as e:
         logger.exception({"Failed to push CloudWatch metrics": {"error": e}})
 
@@ -234,9 +234,9 @@ def handle_event(
     logger.debug({"Processing result": {"result":result}})
 
     if flatten_json(event).get("errorCode", "").startswith(("AccessDenied")):
-        logger.info({"Info": "Event is AccessDenied"})
+        logger.info("Event is AccessDenied")
         if cfg.push_access_denied_cloudwatch_metrics is True:
-            logger.info({"Info":"Pushing AccessDenied CloudWatch metrics"})
+            logger.info("Pushing AccessDenied CloudWatch metrics")
             push_total_access_denied_events_cloudwatch_metric()
             if result.is_ignored:
                 push_total_ignored_access_denied_events_cloudwatch_metric()
@@ -278,10 +278,10 @@ def handle_event(
             )
         else:
             # If we don't have a thread_ts, we need to post the message to the channel
-            logger.info({"Posting message to channel"})
+            logger.info("Posting message to channel")
             slack_response = post_message(message=message, account_id=account_id, slack_config=slack_config)
             if slack_response is not None:
-                logger.info({"Saving thread_ts to DynamoDB"})
+                logger.info("Saving thread_ts to DynamoDB")
                 thread_ts = slack_response.get("ts")
                 if thread_ts is not None:
                     put_event_to_dynamodb(
