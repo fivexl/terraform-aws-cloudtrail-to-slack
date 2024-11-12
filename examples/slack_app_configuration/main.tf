@@ -74,7 +74,7 @@ locals {
 
   # Catch CloudTrail changes
   cloudtrail = "DeleteTrail,StopLogging,UpdateTrail"
-  
+
   # All eventNames
   events_to_track = "${local.cloudtrail},${local.ec2},${local.config}"
 
@@ -98,9 +98,9 @@ module "cloudtrail_to_slack" {
   # String of comma-separated eventNames that you want to track
   events_to_track = local.events_to_track
 
-  lambda_memory_size     = 128
-  lambda_timeout_seconds = 10
-  log_level              = "INFO"
+  lambda_memory_size                    = 128
+  lambda_timeout_seconds                = 10
+  log_level                             = "INFO"
   push_access_denied_cloudwatch_metrics = true # Will push metrics to CloudWatch if access denied event is detected
 
   slack_bot_token = data.aws_ssm_parameter.slack_bot_token.value

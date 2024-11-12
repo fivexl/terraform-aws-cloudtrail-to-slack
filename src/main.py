@@ -43,7 +43,6 @@ cloudwatch_client = boto3.client("cloudwatch")
 
 
 def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # noqa: ANN001
-
     try:
         for record in s3_notification_event["Records"]:
             event_name: str = record["eventName"]
@@ -107,7 +106,7 @@ def get_cloudtrail_log_records(record: Dict) -> Dict | None:
 
     # In case if we get something unexpected
     if "s3" not in record:
-        raise AssertionError(f"recieved record does not contain s3 section: {record}")
+        raise AssertionError(f"received record does not contain s3 section: {record}")
     bucket = record["s3"]["bucket"]["name"]
     key = urllib.parse.unquote_plus(record["s3"]["object"]["key"], encoding="utf-8")  # type: ignore # noqa: PGH003, E501
     # Do not process digest files
@@ -151,11 +150,7 @@ def should_message_be_processed(
                 logger.info(
                     {"Event matched ignore rule and will not be processed": {"ignore_rule": ignore_rule, "flat_event": flat_event}}
                 )  # noqa: E501
-                return ProcessingResult(
-                    should_be_processed=False,
-                    errors=errors,
-                    is_ignored=True
-                    )
+                return ProcessingResult(should_be_processed=False, errors=errors, is_ignored=True)
         except Exception as e:
             logger.exception({"Event parsing failed": {"error": e, "ignore_rule": ignore_rule, "flat_event": flat_event}})  # noqa: E501
             errors.append({"error": e, "rule": ignore_rule})
@@ -231,7 +226,7 @@ def handle_event(
                 slack_config=slack_config,
             )
 
-    logger.debug({"Processing result": {"result":result}})
+    logger.debug({"Processing result": {"result": result}})
 
     if flatten_json(event).get("errorCode", "").startswith(("AccessDenied")):
         logger.info("Event is AccessDenied")

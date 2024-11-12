@@ -20,7 +20,7 @@ def hash_user_identity_and_event_name(event: dict,) -> str | None:
 
     na_count = sum(x == "N/A" for x in [type, principalId, arn, accountId])
 
-    # If more than 3 elements are "N/A", return None, cause we can't be shure that we will get a unique hash.
+    # If more than 3 elements are "N/A", return None, cause we can't be sure that we will get a unique hash.
     if na_count >= 3: # noqa: PLR2004
         logger.info({"Not enough information to hash": {"event": event["userIdentity"]}})
         return None
