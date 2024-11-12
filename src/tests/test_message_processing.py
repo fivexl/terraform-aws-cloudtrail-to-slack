@@ -110,7 +110,7 @@ def test_message_should_not_be_processed_with_rules_as_ignor_rules(message_shoul
         event = message_should_be_processed_test_cases["event"],
         rules = default_rules,
         ignore_rules = default_rules
-        ) == ProcessingResult(should_be_processed=False, errors=[])
+        ) == ProcessingResult(should_be_processed=False, errors=[], is_ignored=True)
 
 
 def test_should_message_be_processed_with_ParsingEventError_handling(
