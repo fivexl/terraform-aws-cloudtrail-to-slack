@@ -10,11 +10,13 @@
   - [AWS SNS](#aws-sns)
 - [Rules](#rules)
   - [Default rules:](#default-rules)
+- [Cloudwatch metrics](#cloudwatch-metrics)
   - [User defined rules to match events](#user-defined-rules-to-match-events)
   - [Events to track](#events-to-track)
   - [Custom Separator for Rules](#custom-separator-for-rules)
   - [Ignore Rules](#ignore-rules)
 - [About processing Cloudtrail events](#about-processing-cloudtrail-events)
+- [Slack App configuration:](#slack-app-configuration)
 - [Terraform specs](#terraform-specs)
   - [Requirements](#requirements)
   - [Providers](#providers)
@@ -23,6 +25,7 @@
   - [Inputs](#inputs)
   - [Outputs](#outputs)
   - [License](#license)
+  - [Weekly review link](#weekly-review-link)
 
 # Terraform module to deploy lambda that sends notifications about AWS CloudTrail events to Slack
 
@@ -36,6 +39,10 @@ This module allows you to get notifications about:
 - track a list of events that you might consider sensitive. Think IAM changes, network changes, data storage (S3, DBs) access changes. Though we recommend keeping that to a minimum to avoid alert fatigue
 - define sophisticated rules to track user-defined conditions that are not covered by default rules (see examples below)
 - send notifications to different Slack channels based on event account id
+
+This module also allows you to gain insights into how many access-denied events are occurring in your AWS Organization by pushing metrics to CloudWatch.
+
+
 
 ### Example message
 
@@ -102,6 +109,11 @@ default_rules.append('event["eventSource"] == "lambda.amazonaws.com" '
                      f'and event["responseElements.functionName"] == "{function_name}" '
                      'and event["eventName"].startswith(("UpdateFunctionCode"))')
 ```
+
+# Cloudwatch metrics
+By default, every time Lambda receives an AccessDenied event, it pushes a `TotalAccessDeniedEvents` metric to CloudWatch. This metric is pushed for all access-denied events, including events ignored by rules. To separate ignored events from the total, the module also pushes a `TotalIgnoredAccessDeniedEvents` metric to CloudWatch. Both metrics are placed in the `CloudTrailToSlack/AccessDeniedEvents` namespace. This feature allows you to gain more insights into the number and dynamics of access-denied events in your AWS Organization.
+
+This functionality can be disabled by setting push_access_denied_cloudwatch_metrics to false.
 
 ## User defined rules to match events
 Rules must be provided as a list of strings, each separated by a comma or a custom separator. Each string is a Python expression that will be evaluated at runtime. By default, the module will send rule evaluation errors to Slack, but you can disable this by setting 'rule_evaluation_errors_to_slack' to 'false'.
