@@ -9,14 +9,57 @@ provider "aws" {
 }
 
 resource "aws_cloudtrail" "main" {
-  name           = "main"
-  s3_bucket_name = aws_s3_bucket.cloudtrail.id
-  // Add other required arguments and block definitions for the CloudTrail resource
+  name                          = "main"
+  s3_bucket_name                = module.cloudtrail_bucket.s3_bucket_id
+  include_global_service_events = true
+  is_multi_region_trail         = true
+  is_organization_trail         = true
+  enable_log_file_validation    = true
+
+  event_selector {
+    read_write_type           = "All"
+    include_management_events = true
+    exclude_management_event_sources = [
+      "kms.amazonaws.com",
+    ]
+
+    data_resource {
+      type   = "AWS::Lambda::Function"
+      values = ["arn:aws:lambda"]
+    }
+  }
 }
 
-resource "aws_s3_bucket" "cloudtrail" {
-  // Add required arguments and block definitions for the S3 bucket resource
+module "cloudtrail_bucket" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "3.7.0"
+
+  bucket = ""
+
+  versioning = {
+    enabled = true
+  }
+
+  logging = {
+    target_bucket = module.logging_bucket.s3_bucket_id
+    target_prefix = ""
+  }
+
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+
+  // S3 bucket-level Public Access Block configuration
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
+
 
 
 # We recommend storing the bot token in the SSM Parameter Store and not committing it to the repo. 
@@ -37,6 +80,10 @@ locals {
   ec2 = "SendSSHPublicKey"
   # Config eventNames
   config = "DeleteConfigRule,DeleteConfigurationRecorder,DeleteDeliveryChannel,DeleteEvaluationResults"
+
+  # Catch CloudTrail changes
+  cloudtrail = "DeleteTrail,StopLogging,UpdateTrail"
+
   # All eventNames
   events_to_track = "${local.cloudtrail},${local.ec2},${local.config}"
 
@@ -54,7 +101,7 @@ locals {
 
 module "cloudtrail_to_slack" {
   source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "3.2.2"
+  version                        = "4.2.0"
   cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
 
   # String of comma-separated eventNames that you want to track
@@ -63,6 +110,7 @@ module "cloudtrail_to_slack" {
   lambda_memory_size     = 128
   lambda_timeout_seconds = 10
   log_level              = "INFO"
+  push_access_denied_cloudwatch_metrics = true # Will push metrics to CloudWatch if access denied event is detected
 
   default_slack_hook_url = data.aws_ssm_parameter.default_hook.value
 
