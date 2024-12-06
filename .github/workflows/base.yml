@@ -11,7 +11,7 @@ jobs:
   python-job:
     uses: fivexl/github-reusable-workflows/.github/workflows/python-job.yml@main
     with:
-      python-version: "3.10.10"
+      python-version: "3.10"
       aws-default-region: "eu-central-1"
       working-directory: "src"
 
