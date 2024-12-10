@@ -157,12 +157,6 @@ variable "lambda_recreate_missing_package" {
   default     = true
 }
 
-variable "lambda_build_in_docker" {
-  type        = bool
-  default     = false
-  description = "Whether to build dependencies in Docker"
-}
-
 variable "tags" {
   description = "Tags to attach to resources"
   default     = {}
