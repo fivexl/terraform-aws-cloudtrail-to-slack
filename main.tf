@@ -26,7 +26,7 @@ module "lambda" {
   ]
 
   recreate_missing_package = var.lambda_recreate_missing_package
-  build_in_docker = var.lambda_build_in_docker
+  build_in_docker          = var.lambda_build_in_docker
 
   environment_variables = merge(
     {
