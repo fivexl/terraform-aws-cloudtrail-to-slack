@@ -25,6 +25,8 @@ module "lambda" {
     }
   ]
 
+  docker_image    = "lambda/python:3.10"
+  docker_file     = "${path.module}/src/docker/Dockerfile"
   recreate_missing_package = var.lambda_recreate_missing_package
   build_in_docker          = var.lambda_build_in_docker
 
