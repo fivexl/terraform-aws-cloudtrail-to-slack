@@ -76,7 +76,7 @@ def handle_removed_object_record(
     record: dict,
 ) -> None:
     logger.info({"s3:ObjectRemoved event": record})
-    account_id = record["userIdentity"]["accountId"] if "accountId" in record["userIdentity"] else ""
+    account_id = record.get("userIdentity", {}).get("accountId", "")
     message = event_to_slack_message(
         event=record,
         source_file=record["s3"]["object"]["key"],
@@ -119,7 +119,7 @@ def get_cloudtrail_log_records(record: Dict) -> Dict | None:
             "key": key,
             "events": content_as_json["Records"],
         }
-
+# ServerSideEncryption="AES256",
     except Exception as e:
         logger.exception({"Error getting object": {"key": key, "bucket": bucket, "error": e}})
         raise e
@@ -138,7 +138,6 @@ def should_message_be_processed(
     ignore_rules: List[str],
 ) -> ProcessingResult:
     flat_event = flatten_json(event)
-    user = event["userIdentity"]
     event_name = event["eventName"]
     logger.debug({"Rules:": rules, "ignore_rules": ignore_rules})
     logger.debug({"Flattened event": flat_event})
@@ -164,7 +163,7 @@ def should_message_be_processed(
             logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}})
             errors.append({"error": e, "rule": rule})
 
-    logger.info({"Event did not match any rules and will not be processed": {"event": event_name, "user": user}})  # noqa: E501
+    logger.info({"Event did not match any rules and will not be processed": {"event": event_name, "user": event.get("userIdentity", "N/A")}})  # noqa: E501
     return ProcessingResult(False, errors)
 
 
@@ -213,7 +212,7 @@ def handle_event(
     logger.debug({"Raw event": json.dumps(event)})
     logger.debug({"Cfg": json.dumps(cfg.__dict__)})
     result = should_message_be_processed(event, rules, ignore_rules)
-    account_id = event["userIdentity"]["accountId"] if "accountId" in event["userIdentity"] else ""
+    account_id = event.get("userIdentity", {}).get("accountId", "")
     if cfg.rule_evaluation_errors_to_slack:
         for error in result.errors:
             post_message(

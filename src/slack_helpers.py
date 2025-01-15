@@ -88,7 +88,7 @@ def event_to_slack_message(event:  dict, source_file :str , account_id_from_even
     additional_details = event.get("additionalEventData")
     event_time = parse_date(event["eventTime"])
     event_id = event.get("eventID", "N/A")
-    actor = event["userIdentity"]["arn"] if "arn" in event["userIdentity"] else event["userIdentity"]
+    actor = event.get("userIdentity", {}).get("arn", "Unknown Identity")
     title = f"*{actor}* called *{event_name}*"
     if error_code is not None:
         title = f":warning: {title} but failed due to ```{error_code}``` :warning:"
