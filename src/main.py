@@ -119,7 +119,6 @@ def get_cloudtrail_log_records(record: Dict) -> Dict | None:
             "key": key,
             "events": content_as_json["Records"],
         }
-# ServerSideEncryption="AES256",
     except Exception as e:
         logger.exception({"Error getting object": {"key": key, "bucket": bucket, "error": e}})
         raise e
