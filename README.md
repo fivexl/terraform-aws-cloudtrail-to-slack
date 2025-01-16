@@ -308,6 +308,7 @@ settings:
 | <a name="input_events_to_track"></a> [events\_to\_track](#input\_events\_to\_track) | Comma-separated list events to track and report | `string` | `""` | no |
 | <a name="input_function_name"></a> [function\_name](#input\_function\_name) | Lambda function name | `string` | `"fivexl-cloudtrail-to-slack"` | no |
 | <a name="input_ignore_rules"></a> [ignore\_rules](#input\_ignore\_rules) | Comma-separated list of rules to ignore events if you need to suppress something. Will be applied before rules and default\_rules | `string` | `""` | no |
+| <a name="input_lambda_build_in_docker"></a> [lambda\_build\_in\_docker](#input\_lambda\_build\_in\_docker) | Whether to build dependencies in Docker | `bool` | `false` | no |
 | <a name="input_lambda_logs_retention_in_days"></a> [lambda\_logs\_retention\_in\_days](#input\_lambda\_logs\_retention\_in\_days) | Controls for how long to keep lambda logs. | `number` | `30` | no |
 | <a name="input_lambda_memory_size"></a> [lambda\_memory\_size](#input\_lambda\_memory\_size) | Amount of memory in MB your Lambda Function can use at runtime. Valid value between 128 MB to 10,240 MB (10 GB), in 64 MB increments. | `number` | `256` | no |
 | <a name="input_lambda_recreate_missing_package"></a> [lambda\_recreate\_missing\_package](#input\_lambda\_recreate\_missing\_package) | Description: Whether to recreate missing Lambda package if it is missing locally or not | `bool` | `true` | no |
