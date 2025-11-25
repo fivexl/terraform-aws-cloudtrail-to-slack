@@ -9,7 +9,7 @@
 - Cost, security & compliance patterns that actually work  
 - Expert guidance from engineers in the field
 
-===========================================================================================
+=========================================================================
 
 <!--- Use Markdown All In One Visual Studio Code extension to refresh TOC -->
 - [Terraform module to deploy lambda that sends notifications about AWS CloudTrail events to Slack](#terraform-module-to-deploy-lambda-that-sends-notifications-about-aws-cloudtrail-events-to-slack)
