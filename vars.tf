@@ -216,3 +216,8 @@ variable "push_access_denied_cloudwatch_metrics" {
   type        = bool
   default     = true
 }
+variable "create_bucket_notification" {
+  description = "Whether to create S3 bucket notification for CloudTrail logs"
+  default     = true
+  type        = bool
+}

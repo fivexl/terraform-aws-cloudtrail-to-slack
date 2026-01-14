@@ -260,6 +260,10 @@ settings:
 8. Copy Signing Secret # for slack_signing_secret module input
 9. Copy Bot User OAuth Token # for slack_bot_token module input
 
+# Single notification for S3 Bucket
+S3 Buckets only support a single notification configuration resource. Declaring multiple aws_s3_bucket_notification resources to the same S3 Bucket will cause a perpetual difference in configuration.
+If you need more destinations for notifications in the CloudTrail S3 bucket, please create resource aws_s3_bucket_notification outside of this module. 
+Use `lambda_function_arn` output to get the Lambda destination.
 
 # Terraform specs
 
@@ -310,6 +314,7 @@ settings:
 | <a name="input_cloudtrail_logs_kms_key_id"></a> [cloudtrail\_logs\_kms\_key\_id](#input\_cloudtrail\_logs\_kms\_key\_id) | Alias, key id or key arn of the KMS Key that used for CloudTrail events | `string` | `""` | no |
 | <a name="input_cloudtrail_logs_s3_bucket_name"></a> [cloudtrail\_logs\_s3\_bucket\_name](#input\_cloudtrail\_logs\_s3\_bucket\_name) | Name of the CloudWatch log s3 bucket that contains CloudTrail events | `string` | n/a | yes |
 | <a name="input_configuration"></a> [configuration](#input\_configuration) | Allows the configuration of the Slack webhook URL per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization. | <pre>list(object({<br>    accounts       = list(string)<br>    slack_hook_url = string<br>  }))</pre> | `null` | no |
+| <a name="input_create_bucket_notification"></a> [create\_bucket\_notification](#input\_create\_bucket\_notification) | Whether to create S3 bucket notification for CloudTrail logs | `bool` | `true` | no |
 | <a name="input_dead_letter_target_arn"></a> [dead\_letter\_target\_arn](#input\_dead\_letter\_target\_arn) | The ARN of an SNS topic or SQS queue to notify when an invocation fails. | `string` | `null` | no |
 | <a name="input_default_slack_channel_id"></a> [default\_slack\_channel\_id](#input\_default\_slack\_channel\_id) | The Slack channel ID to be used if the AWS account ID does not match any account ID in the configuration variable. | `string` | `null` | no |
 | <a name="input_default_slack_hook_url"></a> [default\_slack\_hook\_url](#input\_default\_slack\_hook\_url) | The Slack incoming webhook URL to be used if the AWS account ID does not match any account ID in the configuration variable. | `string` | `null` | no |
