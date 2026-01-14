@@ -178,6 +178,7 @@ resource "aws_lambda_permission" "s3" {
 }
 
 resource "aws_s3_bucket_notification" "bucket_notification" {
+  count  = var.create_bucket_notification ? 1 : 0
   bucket = data.aws_s3_bucket.cloudtrail.id
 
   lambda_function {
@@ -188,4 +189,9 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
   }
 
   depends_on = [aws_lambda_permission.s3]
+}
+
+moved {
+  from = aws_s3_bucket_notification.bucket_notification
+  to   = aws_s3_bucket_notification.bucket_notification[0]
 }
