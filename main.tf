@@ -188,6 +188,8 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
     filter_suffix       = ".json.gz"
   }
 
+  eventbridge = var.enable_eventbridge_notificaitons
+
   depends_on = [aws_lambda_permission.s3]
 }
 

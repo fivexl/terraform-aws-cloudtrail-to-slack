@@ -282,7 +282,7 @@ Use `lambda_function_arn` output to get the Lambda destination.
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.8.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 4.8 |
 
 ## Modules
 
@@ -321,6 +321,7 @@ Use `lambda_function_arn` output to get the Lambda destination.
 | <a name="input_default_sns_topic_arn"></a> [default\_sns\_topic\_arn](#input\_default\_sns\_topic\_arn) | Default topic for all notifications. If not set, sns notifications will not be sent. | `string` | `null` | no |
 | <a name="input_dynamodb_table_name"></a> [dynamodb\_table\_name](#input\_dynamodb\_table\_name) | Name of the dynamodb table, it would not be created if slack\_bot\_token is not set. | `string` | `"fivexl-cloudtrail-to-slack-table"` | no |
 | <a name="input_dynamodb_time_to_live"></a> [dynamodb\_time\_to\_live](#input\_dynamodb\_time\_to\_live) | How long to keep cloudtrail events in dynamodb table, for collecting similar events in thread of one message | `number` | `900` | no |
+| <a name="input_enable_eventbridge_notificaitons"></a> [enable\_eventbridge\_notificaitons](#input\_enable\_eventbridge\_notificaitons) | Whether to enable EventBridge notifications for S3 bucket | `bool` | `false` | no |
 | <a name="input_events_to_track"></a> [events\_to\_track](#input\_events\_to\_track) | Comma-separated list events to track and report | `string` | `""` | no |
 | <a name="input_function_name"></a> [function\_name](#input\_function\_name) | Lambda function name | `string` | `"fivexl-cloudtrail-to-slack"` | no |
 | <a name="input_ignore_rules"></a> [ignore\_rules](#input\_ignore\_rules) | Comma-separated list of rules to ignore events if you need to suppress something. Will be applied before rules and default\_rules | `string` | `""` | no |
