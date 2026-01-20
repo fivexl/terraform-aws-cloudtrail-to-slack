@@ -42,13 +42,15 @@ sns_client = boto3.client("sns")
 cloudwatch_client = boto3.client("cloudwatch")
 
 
-def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # noqa: ANN001
+def lambda_handler(event: Dict[str, List[Any]], _) -> int:  # noqa: ANN001
     try:
-        for record in s3_notification_event["Records"]:
+        # Check if this is an SNS event wrapping S3 notifications
+        records = extract_s3_records_from_event(event)
+
+        for record in records:
             event_name: str = record["eventName"]
             if "Digest" in record["s3"]["object"]["key"]:
                 return 200
-
             if event_name.startswith("ObjectRemoved"):
                 handle_removed_object_record(
                     record=record,
@@ -64,12 +66,46 @@ def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # no
 
     except Exception as e:
         post_message(
-            message=message_for_slack_error_notification(e, s3_notification_event),
+            message=message_for_slack_error_notification(e, event),
             account_id=None,
             slack_config=slack_config,
         )
         logger.exception({"Failed to process event": e})
     return 200
+
+
+def extract_s3_records_from_event(event: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Extract S3 records from either direct S3 events or SNS-wrapped S3 events.
+    Returns: List of S3 record dictionaries
+    """
+    records = []
+
+    if "Records" not in event:
+        logger.error({"Event does not contain Records": event})
+        return records
+
+    for record in event["Records"]:
+        # Check if this is an SNS record
+        if record.get("EventSource") == "aws:sns" or record.get("eventSource") == "aws:sns":
+            logger.debug("Processing SNS-wrapped S3 event")
+            try:
+                # Extract the S3 event from SNS Message
+                sns_message = json.loads(record["Sns"]["Message"])
+                if "Records" in sns_message:
+                    records.extend(sns_message["Records"])
+                else:
+                    logger.warning({"SNS message does not contain S3 Records": sns_message})
+            except (KeyError, json.JSONDecodeError) as e:
+                logger.exception({"Failed to parse SNS message": {"error": e, "record": record}})
+        # Check if this is a direct S3 record
+        elif record.get("eventSource") == "aws:s3":
+            logger.debug("Processing direct S3 event")
+            records.append(record)
+        else:
+            logger.warning({"Unknown event source": record.get("eventSource", "N/A")})
+
+    return records
 
 
 def handle_removed_object_record(
@@ -162,7 +198,9 @@ def should_message_be_processed(
             logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}})
             errors.append({"error": e, "rule": rule})
 
-    logger.info({"Event did not match any rules and will not be processed": {"event": event_name, "user": event.get("userIdentity", "N/A")}})  # noqa: E501
+    logger.info(
+        {"Event did not match any rules and will not be processed": {"event": event_name, "user": event.get("userIdentity", "N/A")}}
+    )  # noqa: E501
     return ProcessingResult(False, errors)
 
 

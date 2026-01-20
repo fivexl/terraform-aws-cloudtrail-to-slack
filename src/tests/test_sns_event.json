@@ -1,0 +1,22 @@
+{
+    "Records": [
+        {
+            "EventSource": "aws:sns",
+            "EventVersion": "1.0",
+            "EventSubscriptionArn": "arn:aws:sns:us-east-1:123456789012:s3-notifications:12345678-1234-1234-1234-123456789012",
+            "Sns": {
+                "Type": "Notification",
+                "MessageId": "12345678-1234-1234-1234-123456789012",
+                "TopicArn": "arn:aws:sns:us-east-1:123456789012:s3-notifications",
+                "Subject": "Amazon S3 Notification",
+                "Message": "{\"Records\":[{\"eventVersion\":\"2.1\",\"eventSource\":\"aws:s3\",\"awsRegion\":\"us-east-1\",\"eventTime\":\"2026-01-19T12:00:00.000Z\",\"eventName\":\"ObjectCreated:Put\",\"userIdentity\":{\"principalId\":\"AWS:AIDAI123456789EXAMPLE\"},\"requestParameters\":{\"sourceIPAddress\":\"192.0.2.1\"},\"responseElements\":{\"x-amz-request-id\":\"ABC123DEF456\",\"x-amz-id-2\":\"example-id-2\"},\"s3\":{\"s3SchemaVersion\":\"1.0\",\"configurationId\":\"test-config\",\"bucket\":{\"name\":\"my-cloudtrail-bucket\",\"ownerIdentity\":{\"principalId\":\"A1234567890123\"},\"arn\":\"arn:aws:s3:::my-cloudtrail-bucket\"},\"object\":{\"key\":\"AWSLogs/123456789012/CloudTrail/us-east-1/2026/01/19/123456789012_CloudTrail_us-east-1_20260119T1200Z_abc123.json.gz\",\"size\":1024,\"eTag\":\"abc123def456\",\"sequencer\":\"00ABC123DEF456\"}}}]}",
+                "Timestamp": "2026-01-19T12:00:00.000Z",
+                "SignatureVersion": "1",
+                "Signature": "example-signature",
+                "SigningCertUrl": "https://sns.us-east-1.amazonaws.com/cert.pem",
+                "UnsubscribeUrl": "https://sns.us-east-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:us-east-1:123456789012:s3-notifications:12345678-1234-1234-1234-123456789012",
+                "MessageAttributes": {}
+            }
+        }
+    ]
+}

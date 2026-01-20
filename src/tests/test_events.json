@@ -270,7 +270,7 @@
         },
         {
             "test_event_name": "UpdateFunctionCode",
-            "event":{
+            "event": {
                 "eventVersion": "1.08",
                 "userIdentitytype": "AssumedRole",
                 "userIdentity": {
@@ -280,16 +280,16 @@
                     "accessKeyId": "-",
                     "sessionContext": {
                         "sessionIssuer": {
-                                "type": "Role",
-                                "principalId": "-",
-                                "arn": "--",
-                                "accountId": "-",
-                                "userName": "-"
-                            },
-                            "attributes": {
-                                "creationDate": "2023-07-03T18:07:02Z",
-                                "mfaAuthenticated": "false"
-                            }
+                            "type": "Role",
+                            "principalId": "-",
+                            "arn": "--",
+                            "accountId": "-",
+                            "userName": "-"
+                        },
+                        "attributes": {
+                            "creationDate": "2023-07-03T18:07:02Z",
+                            "mfaAuthenticated": "false"
+                        }
                     }
                 },
                 "eventTime": "2000-01-03T16:14:51Z",
@@ -316,7 +316,7 @@
                 "responseElements": {
                     "functionName": "fivexl-cloudtrail-to-slack",
                     "functionArn": "-k",
-                    "runtime": "python3.10",
+                    "runtime": "python3.13",
                     "role": "arn:aws:iam::-:role/fivexl-cloudtrail-to-slack",
                     "handler": "main.lambda_handler",
                     "codeSize": 23383731,
@@ -335,8 +335,12 @@
                     "lastUpdateStatusReason": "The function is being created.",
                     "lastUpdateStatusReasonCode": "Creating",
                     "packageType": "Zip",
-                    "architectures": {"0": "x86_64"},
-                    "ephemeralStorage": {"size": 512},
+                    "architectures": {
+                        "0": "x86_64"
+                    },
+                    "ephemeralStorage": {
+                        "size": 512
+                    },
                     "snapStart": {
                         "applyOn": "None",
                         "optimizationStatus": "Off"
@@ -398,7 +402,7 @@
                 "responseElements": {
                     "functionName": "fivexl-cloudtrail-to-slack",
                     "functionArn": "-",
-                    "runtime": "python3.10",
+                    "runtime": "python3.13",
                     "role": "-",
                     "handler": "main.lambda_handler",
                     "codeSize": 23564916,
@@ -443,4 +447,3 @@
         }
     ]
 }
-

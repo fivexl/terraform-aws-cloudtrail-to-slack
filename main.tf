@@ -5,7 +5,7 @@ module "lambda" {
   function_name = var.function_name
   description   = "Send CloudTrail Events to Slack"
   handler       = "main.lambda_handler"
-  runtime       = "python3.10"
+  runtime       = "python3.13"
   timeout       = var.lambda_timeout_seconds
   publish       = true
 
@@ -25,7 +25,7 @@ module "lambda" {
     }
   ]
 
-  docker_image             = "lambda/python:3.10"
+  docker_image             = "lambda/python:3.13"
   docker_file              = "${path.module}/src/docker/Dockerfile"
   recreate_missing_package = var.lambda_recreate_missing_package
   build_in_docker          = var.lambda_build_in_docker
@@ -94,7 +94,7 @@ data "aws_iam_policy_document" "s3" {
       "dynamodb:GetItem",
     ]
     resources = [
-      "arn:${data.aws_partition.current.partition}:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.dynamodb_table_name}"
+      "arn:${data.aws_partition.current.partition}:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${var.dynamodb_table_name}"
     ]
   }
   statement {
@@ -178,7 +178,7 @@ resource "aws_lambda_permission" "s3" {
 }
 
 resource "aws_s3_bucket_notification" "bucket_notification" {
-  count  = var.create_bucket_notification ? 1 : 0
+  count  = var.create_bucket_notification && !var.enable_s3_sns_notifications ? 1 : 0
   bucket = data.aws_s3_bucket.cloudtrail.id
 
   lambda_function {
@@ -192,6 +192,24 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
 
   depends_on = [aws_lambda_permission.s3]
 }
+
+# S3 Bucket Notification to SNS
+resource "aws_s3_bucket_notification" "bucket_notification_sns" {
+  count  = var.enable_s3_sns_notifications && var.create_bucket_notification ? 1 : 0
+  bucket = data.aws_s3_bucket.cloudtrail.id
+
+  topic {
+    topic_arn     = var.s3_sns_topic_arn != null ? var.s3_sns_topic_arn : aws_sns_topic.s3_notifications[0].arn
+    events        = var.s3_removed_object_notification ? ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"] : ["s3:ObjectCreated:*"]
+    filter_prefix = var.s3_notification_filter_prefix
+    filter_suffix = ".json.gz"
+  }
+
+  eventbridge = var.enable_eventbridge_notificaitons
+
+  depends_on = [aws_sns_topic_policy.s3_notifications]
+}
+
 
 moved {
   from = aws_s3_bucket_notification.bucket_notification
