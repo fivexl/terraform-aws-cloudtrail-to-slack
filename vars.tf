@@ -228,3 +228,21 @@ variable "enable_eventbridge_notificaitons" {
   default     = false
   type        = bool
 }
+
+variable "enable_s3_sns_notifications" {
+  description = "Whether to enable S3 to SNS to Lambda flow. If true, S3 bucket will send notifications to SNS topic, which will trigger Lambda"
+  default     = false
+  type        = bool
+}
+
+variable "s3_sns_topic_name" {
+  description = "Name of the SNS topic for S3 bucket notifications. Only used if enable_s3_sns_notifications is true"
+  default     = null
+  type        = string
+}
+
+variable "s3_sns_topic_arn" {
+  description = "ARN of existing SNS topic for S3 bucket notifications. If not provided and enable_s3_sns_notifications is true, a new topic will be created"
+  default     = null
+  type        = string
+}

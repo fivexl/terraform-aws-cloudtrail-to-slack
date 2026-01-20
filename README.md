@@ -81,6 +81,21 @@ The module has three variants of notification delivery:
 
 All three variants of notification delivery support separating notifications into different Slack channels or SNS topics based on event account ID.
 
+## S3 to SNS to Lambda Flow
+
+The module supports two event flow patterns:
+
+1. **Direct S3 to Lambda** (default): S3 bucket notifications directly invoke the Lambda function
+2. **S3 to SNS to Lambda**: S3 bucket notifications are sent to an SNS topic, which then triggers the Lambda function
+
+The S3 to SNS to Lambda flow provides additional benefits:
+- Multiple subscribers can receive the same S3 events
+- Better support for fan-out patterns
+- Easier cross-account event processing
+- Additional filtering and routing capabilities via SNS
+
+To enable S3 to SNS to Lambda flow, set `enable_s3_sns_notifications = true`. See the [S3 SNS configuration example](https://github.com/fivexl/terraform-aws-cloudtrail-to-slack/blob/master/examples/s3_sns_configuration/main.tf) for details.
+
 # Rules
 
 Rules are python strings that are evaluated in the runtime and should return the bool value, if rule returns True, then notification will be sent to Slack.

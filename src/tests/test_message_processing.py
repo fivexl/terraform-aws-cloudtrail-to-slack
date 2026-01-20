@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from main import ProcessingResult, should_message_be_processed
+from main import ProcessingResult, should_message_be_processed, extract_s3_records_from_event
 from rules import default_rules
 
 # ruff: noqa: ANN201, ANN001, E501
@@ -14,48 +14,41 @@ with open("tests/test_events.json") as f:
     data = json.load(f)
 
 
-@pytest.fixture(
-    params = data["test_events"],
-    ids = [event["test_event_name"] for event in data["test_events"]]
-)
+@pytest.fixture(params=data["test_events"], ids=[event["test_event_name"] for event in data["test_events"]])
 def message_should_be_processed_test_cases(request):
     return request.param
 
 
 @pytest.fixture(
-    params = [
+    params=[
         {
             "in": {
-                "event":{
-                    "userIdentity": "123",
-                    "eventName": "empty_event",
-                    "eventSource": "imagination"
-                },
+                "event": {"userIdentity": "123", "eventName": "empty_event", "eventSource": "imagination"},
             },
             "out": {
                 "result": ProcessingResult(False, []),
             },
         },
     ],
-    ids = ["empty_event"],
+    ids=["empty_event"],
 )
 def message_should_not_be_processed_test_cases(request):
     return request.param
 
 
 @pytest.fixture(
-    params = [
+    params=[
         {
             "in": {
                 "incorrect_rule": "incorrect_rule",
-                "event":{
+                "event": {
                     "eventVersion": "1.05",
                     "userIdentity": {
                         "type": "IAMUser",
                         "principalId": "XXXXXXXXXXX",
                         "arn": "arn:aws:iam::XXXXXXXXXXX:user/xxxxxxxx",
                         "accountId": "XXXXXXXXXXX",
-                        "userName": "xxxxxxxx"
+                        "userName": "xxxxxxxx",
                     },
                     "eventTime": "2019-07-03T16:14:51Z",
                     "eventSource": "signin.amazonaws.com",
@@ -64,62 +57,53 @@ def message_should_not_be_processed_test_cases(request):
                     "sourceIPAddress": "83.41.208.104",
                     "userAgent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0",
                     "requestParameters": "null",
-                    "responseElements": {
-                        "ConsoleLogin": "Success"
-                    },
+                    "responseElements": {"ConsoleLogin": "Success"},
                     "additionalEventData": {
                         "LoginTo": "https://console.aws.amazon.com/ec2/v2/home?XXXXXXXXXXX",
                         "MobileVersion": "No",
-                        "MFAUsed": "No"
+                        "MFAUsed": "No",
                     },
                     "eventID": "0e4d136e-25d4-4d92-b2b2-8a9fe1e3f1af",
                     "eventType": "AwsConsoleSignIn",
-                    "recipientAccountId": "XXXXXXXXXXX"
+                    "recipientAccountId": "XXXXXXXXXXX",
                 },
             },
             "out": {
-                "result": ProcessingResult(should_be_processed=True, errors=[{"error": NameError("name 'incorrect_rule' is not defined"), "rule": "incorrect_rule"}]),
+                "result": ProcessingResult(
+                    should_be_processed=True,
+                    errors=[{"error": NameError("name 'incorrect_rule' is not defined"), "rule": "incorrect_rule"}],
+                ),
             },
         },
     ],
-    ids= ["incorrect_rule"],
+    ids=["incorrect_rule"],
 )
 def message_should_be_processed_with_incorrect_rule_test_case(request):
     return request.param
 
 
-
 def test_message_should_be_processed(message_should_be_processed_test_cases) -> None:
     assert should_message_be_processed(
-        event = message_should_be_processed_test_cases["event"],
-        rules = default_rules,
-        ignore_rules = []
-        ) == ProcessingResult(should_be_processed=True, errors=[])
+        event=message_should_be_processed_test_cases["event"], rules=default_rules, ignore_rules=[]
+    ) == ProcessingResult(should_be_processed=True, errors=[])
 
 
 def test_message_should_not_be_processed(message_should_not_be_processed_test_cases) -> None:
-    assert should_message_be_processed(
-        event = message_should_not_be_processed_test_cases["in"]["event"],
-        rules = default_rules,
-        ignore_rules = []
-        ) == message_should_not_be_processed_test_cases["out"]["result"]
+    assert (
+        should_message_be_processed(event=message_should_not_be_processed_test_cases["in"]["event"], rules=default_rules, ignore_rules=[])
+        == message_should_not_be_processed_test_cases["out"]["result"]
+    )
 
 
 def test_message_should_not_be_processed_with_rules_as_ignor_rules(message_should_be_processed_test_cases) -> None:
     assert should_message_be_processed(
-        event = message_should_be_processed_test_cases["event"],
-        rules = default_rules,
-        ignore_rules = default_rules
-        ) == ProcessingResult(should_be_processed=False, errors=[], is_ignored=True)
+        event=message_should_be_processed_test_cases["event"], rules=default_rules, ignore_rules=default_rules
+    ) == ProcessingResult(should_be_processed=False, errors=[], is_ignored=True)
 
 
-def test_should_message_be_processed_with_ParsingEventError_handling(
-    message_should_be_processed_with_incorrect_rule_test_case
-) -> None:
+def test_should_message_be_processed_with_ParsingEventError_handling(message_should_be_processed_with_incorrect_rule_test_case) -> None:
     almost_default_rules = default_rules.copy()
-    almost_default_rules.insert(
-        0, message_should_be_processed_with_incorrect_rule_test_case["in"]["incorrect_rule"]
-    )
+    almost_default_rules.insert(0, message_should_be_processed_with_incorrect_rule_test_case["in"]["incorrect_rule"])
     result = should_message_be_processed(
         event=message_should_be_processed_with_incorrect_rule_test_case["in"]["event"],
         rules=almost_default_rules,  # type: ignore # noqa:
@@ -130,5 +114,100 @@ def test_should_message_be_processed_with_ParsingEventError_handling(
     assert result.should_be_processed == message_should_be_processed_with_incorrect_rule_test_case["out"]["result"].should_be_processed
 
     # compare error messages in the result
-    assert str(result.errors[0]["error"]) == str(message_should_be_processed_with_incorrect_rule_test_case["out"]["result"].errors[0]["error"])
+    assert str(result.errors[0]["error"]) == str(
+        message_should_be_processed_with_incorrect_rule_test_case["out"]["result"].errors[0]["error"]
+    )
     assert result.errors[0]["rule"] == message_should_be_processed_with_incorrect_rule_test_case["out"]["result"].errors[0]["rule"]
+
+
+def test_extract_s3_records_from_direct_s3_event() -> None:
+    """Test extracting S3 records from a direct S3 event."""
+    direct_s3_event = {
+        "Records": [
+            {
+                "eventSource": "aws:s3",
+                "eventName": "ObjectCreated:Put",
+                "s3": {"bucket": {"name": "test-bucket"}, "object": {"key": "test-key.json.gz"}},
+            }
+        ]
+    }
+
+    records = extract_s3_records_from_event(direct_s3_event)
+
+    assert len(records) == 1
+    assert records[0]["eventSource"] == "aws:s3"
+    assert records[0]["eventName"] == "ObjectCreated:Put"
+
+
+def test_extract_s3_records_from_sns_wrapped_event() -> None:
+    """Test extracting S3 records from an SNS-wrapped S3 event."""
+    sns_wrapped_event = {
+        "Records": [
+            {
+                "EventSource": "aws:sns",
+                "Sns": {
+                    "Message": json.dumps(
+                        {
+                            "Records": [
+                                {
+                                    "eventSource": "aws:s3",
+                                    "eventName": "ObjectCreated:Put",
+                                    "s3": {"bucket": {"name": "test-bucket"}, "object": {"key": "test-key.json.gz"}},
+                                }
+                            ]
+                        }
+                    )
+                },
+            }
+        ]
+    }
+
+    records = extract_s3_records_from_event(sns_wrapped_event)
+
+    assert len(records) == 1
+    assert records[0]["eventSource"] == "aws:s3"
+    assert records[0]["eventName"] == "ObjectCreated:Put"
+
+
+def test_extract_s3_records_from_multiple_sns_records() -> None:
+    """Test extracting S3 records from multiple SNS records."""
+    sns_wrapped_event = {
+        "Records": [
+            {
+                "EventSource": "aws:sns",
+                "Sns": {
+                    "Message": json.dumps(
+                        {
+                            "Records": [
+                                {
+                                    "eventSource": "aws:s3",
+                                    "eventName": "ObjectCreated:Put",
+                                    "s3": {"bucket": {"name": "test-bucket"}, "object": {"key": "key1.json.gz"}},
+                                },
+                                {
+                                    "eventSource": "aws:s3",
+                                    "eventName": "ObjectCreated:Copy",
+                                    "s3": {"bucket": {"name": "test-bucket"}, "object": {"key": "key2.json.gz"}},
+                                },
+                            ]
+                        }
+                    )
+                },
+            }
+        ]
+    }
+
+    records = extract_s3_records_from_event(sns_wrapped_event)
+
+    assert len(records) == 2
+    assert records[0]["eventName"] == "ObjectCreated:Put"
+    assert records[1]["eventName"] == "ObjectCreated:Copy"
+
+
+def test_extract_s3_records_empty_event() -> None:
+    """Test handling of event without Records."""
+    empty_event = {}
+
+    records = extract_s3_records_from_event(empty_event)
+
+    assert len(records) == 0
