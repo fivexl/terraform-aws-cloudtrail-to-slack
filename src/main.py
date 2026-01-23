@@ -42,7 +42,39 @@ sns_client = boto3.client("sns")
 cloudwatch_client = boto3.client("cloudwatch")
 
 
-def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # noqa: ANN001
+def lambda_handler(incoming_event: Dict[str, Any], _) -> int:  # noqa: ANN001
+    """
+    Lambda handler supporting S3 notifications from:
+    1. Direct S3 notifications (S3 -> Lambda)
+    2. SNS wrapped notifications (S3 -> SNS -> Lambda)
+
+    Note: SNS does NOT support raw_message_delivery for Lambda endpoints.
+    Lambda always receives SNS envelope which must be unwrapped.
+    """
+    # Unwrap SNS envelope first if present
+    # This ensures error handler receives proper S3 notification format
+    records = incoming_event.get("Records", [])
+
+    if records and records[0].get("EventSource") == "aws:sns":
+        # SNS format: S3 -> SNS -> Lambda
+        # Extract S3 notification from SNS message
+        s3_records = []
+        for sns_record in records:
+            message = sns_record.get("Sns", {}).get("Message", "")
+            try:
+                s3_notification = json.loads(message)
+                # The message contains S3 notification with Records array
+                if "Records" in s3_notification:
+                    s3_records.extend(s3_notification["Records"])
+            except json.JSONDecodeError as e:
+                logger.error({"Failed to parse SNS message": {"error": str(e), "message": message}})
+                continue
+        # Create proper S3 notification format for downstream processing
+        s3_notification_event = {"Records": s3_records}
+    else:
+        # Direct S3 notification
+        s3_notification_event = incoming_event
+
     try:
         for record in s3_notification_event["Records"]:
             event_name: str = record["eventName"]

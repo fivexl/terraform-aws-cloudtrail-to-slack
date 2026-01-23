@@ -168,7 +168,42 @@ data "aws_caller_identity" "current" {}
 
 data "aws_region" "current" {}
 
+# SNS Topic for S3 notifications (optional - for fan-out pattern)
+resource "aws_sns_topic" "s3_notifications" {
+  count = var.use_sns_topic_notifications && var.create_sns_topic_notifications ? 1 : 0
+  name  = var.sns_topic_name_for_notifications
+  tags  = var.tags
+}
+
+# SNS Topic Policy - Allow S3 to publish
+resource "aws_sns_topic_policy" "s3_notifications" {
+  count = var.use_sns_topic_notifications && var.create_sns_topic_notifications ? 1 : 0
+  arn   = aws_sns_topic.s3_notifications[0].arn
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "s3.amazonaws.com"
+      }
+      Action   = "SNS:Publish"
+      Resource = aws_sns_topic.s3_notifications[0].arn
+      Condition = {
+        StringEquals = {
+          "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+        }
+        ArnLike = {
+          "aws:SourceArn" = data.aws_s3_bucket.cloudtrail.arn
+        }
+      }
+    }]
+  })
+}
+
+# Lambda permission for direct S3 invocation
 resource "aws_lambda_permission" "s3" {
+  count          = var.use_sns_topic_notifications ? 0 : 1
   statement_id   = "AllowExecutionFromS3Bucket"
   action         = "lambda:InvokeFunction"
   function_name  = module.lambda.lambda_function_name
@@ -177,20 +212,60 @@ resource "aws_lambda_permission" "s3" {
   source_account = data.aws_caller_identity.current.account_id
 }
 
+# Lambda permission for SNS invocation
+resource "aws_lambda_permission" "sns" {
+  count         = var.use_sns_topic_notifications ? 1 : 0
+  statement_id  = "AllowExecutionFromSNS"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda.lambda_function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = var.create_sns_topic_notifications ? aws_sns_topic.s3_notifications[0].arn : var.sns_topic_arn_for_notifications
+}
+
+# SNS Subscription - Subscribe Lambda to SNS topic
+resource "aws_sns_topic_subscription" "lambda" {
+  count     = var.use_sns_topic_notifications ? 1 : 0
+  topic_arn = var.create_sns_topic_notifications ? aws_sns_topic.s3_notifications[0].arn : var.sns_topic_arn_for_notifications
+  protocol  = "lambda"
+  endpoint  = module.lambda.lambda_function_arn
+  # Note: raw_message_delivery is NOT supported for Lambda endpoints
+  # Lambda will receive SNS envelope and automatically unwrap it
+}
+
+# S3 Bucket Notification
 resource "aws_s3_bucket_notification" "bucket_notification" {
   count  = var.create_bucket_notification ? 1 : 0
   bucket = data.aws_s3_bucket.cloudtrail.id
 
-  lambda_function {
-    lambda_function_arn = module.lambda.lambda_function_arn
-    events              = var.s3_removed_object_notification ? ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"] : ["s3:ObjectCreated:*"]
-    filter_prefix       = var.s3_notification_filter_prefix
-    filter_suffix       = ".json.gz"
+  # Direct Lambda notification (when NOT using SNS)
+  dynamic "lambda_function" {
+    for_each = var.use_sns_topic_notifications ? [] : [1]
+    content {
+      lambda_function_arn = module.lambda.lambda_function_arn
+      events              = var.s3_removed_object_notification ? ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"] : ["s3:ObjectCreated:*"]
+      filter_prefix       = var.s3_notification_filter_prefix
+      filter_suffix       = ".json.gz"
+    }
+  }
+
+  # SNS topic notification (when using SNS)
+  dynamic "topic" {
+    for_each = var.use_sns_topic_notifications ? [1] : []
+    content {
+      topic_arn     = var.create_sns_topic_notifications ? aws_sns_topic.s3_notifications[0].arn : var.sns_topic_arn_for_notifications
+      events        = var.s3_removed_object_notification ? ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"] : ["s3:ObjectCreated:*"]
+      filter_prefix = var.s3_notification_filter_prefix
+      filter_suffix = ".json.gz"
+    }
   }
 
   eventbridge = var.enable_eventbridge_notificaitons
 
-  depends_on = [aws_lambda_permission.s3]
+  depends_on = [
+    aws_lambda_permission.s3,
+    aws_lambda_permission.sns,
+    aws_sns_topic_policy.s3_notifications
+  ]
 }
 
 moved {

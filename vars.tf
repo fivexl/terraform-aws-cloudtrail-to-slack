@@ -228,3 +228,27 @@ variable "enable_eventbridge_notificaitons" {
   default     = false
   type        = bool
 }
+
+variable "use_sns_topic_notifications" {
+  description = "Whether to use SNS topic for S3 notifications (allows multiple Lambda consumers). When true, S3 sends events to SNS which fans out to Lambda. Note: Lambda endpoints do NOT support raw_message_delivery, so SNS messages are automatically unwrapped by the Lambda code."
+  default     = false
+  type        = bool
+}
+
+variable "create_sns_topic_notifications" {
+  description = "Whether to create SNS topic for S3 notifications. Only used when use_sns_topic_notifications=true. If false, you must provide sns_topic_arn_for_notifications."
+  default     = true
+  type        = bool
+}
+
+variable "sns_topic_arn_for_notifications" {
+  description = "ARN of existing SNS topic to use for S3 notifications. Only used when use_sns_topic_notifications=true and create_sns_topic_notifications=false."
+  default     = null
+  type        = string
+}
+
+variable "sns_topic_name_for_notifications" {
+  description = "Name of SNS topic to create for S3 notifications. Only used when create_sns_topic_notifications=true."
+  default     = "cloudtrail-s3-notifications"
+  type        = string
+}
