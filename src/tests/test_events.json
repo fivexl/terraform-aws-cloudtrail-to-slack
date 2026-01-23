@@ -15,7 +15,7 @@
                 "eventSource": "signin.amazonaws.com",
                 "eventName": "ConsoleLogin",
                 "awsRegion": "us-east-1",
-                "sourceIPAddress": "83.41.208.104",
+                "sourceIPAddress": "192.0.2.1",
                 "userAgent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0",
                 "requestParameters": "null",
                 "responseElements": {
@@ -439,6 +439,65 @@
                 "managementEvent": true,
                 "recipientAccountId": "-",
                 "eventCategory": "Management"
+            }
+        },
+        {
+            "test_event_name": "eventbridge_s3_object_created",
+            "event_format": "eventbridge",
+            "event": {
+                "version": "0",
+                "id": "04a1098f-768f-6eb8-4dfa-cb8f135c536b",
+                "detail-type": "Object Created",
+                "source": "aws.s3",
+                "account": "111222233344",
+                "time": "2026-01-23T19:47:57Z",
+                "region": "eu-central-1",
+                "resources": ["arn:aws:s3:::aws-cloudtrail-logs-test"],
+                "detail": {
+                    "version": "0",
+                    "bucket": {
+                        "name": "aws-cloudtrail-logs-test"
+                    },
+                    "object": {
+                        "key": "AWSLogs/o-test/111222233344/CloudTrail/eu-west-2/2026/01/23/111222233344_CloudTrail_eu-west-2_test_eu-central-1_20260123T194604Z.json.gz",
+                        "size": 741,
+                        "etag": "93de865dzca02798c1c5950b7c1676bd",
+                        "version-id": "1AoQQhFrHdBwRs_CW9M8QJiJa.rGMH0s",
+                        "sequencer": "006933D06D4B49E142"
+                    },
+                    "request-id": "RNSBX35KY97YCRHT",
+                    "requester": "cloudtrail.amazonaws.com",
+                    "source-ip-address": "198.51.100.1",
+                    "reason": "PutObject"
+                }
+            }
+        },
+        {
+            "test_event_name": "eventbridge_s3_object_deleted",
+            "event_format": "eventbridge",
+            "event": {
+                "version": "0",
+                "id": "test-delete-id",
+                "detail-type": "Object Deleted",
+                "source": "aws.s3",
+                "account": "111222233344",
+                "time": "2026-01-23T20:00:00Z",
+                "region": "eu-central-1",
+                "resources": ["arn:aws:s3:::aws-cloudtrail-logs-test"],
+                "detail": {
+                    "version": "0",
+                    "bucket": {
+                        "name": "aws-cloudtrail-logs-test"
+                    },
+                    "object": {
+                        "key": "AWSLogs/test/CloudTrail/us-east-1/2026/01/23/deleted-file.json.gz",
+                        "sequencer": "006973D16D4B49E143"
+                    },
+                    "request-id": "TEST123456",
+                    "requester": "arn:aws:iam::111222233344:user/test-user",
+                    "source-ip-address": "192.0.2.1",
+                    "reason": "DeleteObject"
+                }
             }
         }
     ]

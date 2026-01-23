@@ -42,29 +42,85 @@ sns_client = boto3.client("sns")
 cloudwatch_client = boto3.client("cloudwatch")
 
 
-def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # noqa: ANN001
+def extract_s3_info(event: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract bucket, key, account_id, and event_name from either S3 notification or EventBridge format.
+
+    References:
+    - S3 Notifications: https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-content-structure.html
+    - EventBridge Events: https://docs.aws.amazon.com/AmazonS3/latest/userguide/ev-events.html
+
+    Raises:
+        ValueError: If event format is not recognized or detail-type is unknown
+    """
+    # EventBridge format - check for detail-type field
+    if "detail-type" in event and "detail" in event:
+        detail = event["detail"]
+        detail_type = event["detail-type"]
+
+        # Map EventBridge detail-type to S3 event_name
+        # Per AWS docs: https://docs.aws.amazon.com/AmazonS3/latest/userguide/ev-events.html
+        # Valid detail-type values are: "Object Created", "Object Deleted", etc.
+        if detail_type == "Object Created":
+            event_name = "ObjectCreated:Put"
+        elif detail_type == "Object Deleted":
+            event_name = "ObjectRemoved:Delete"
+        else:
+            # Unknown EventBridge detail-type - this is a failure
+            error_msg = f"Unknown EventBridge detail-type: {detail_type}"
+            logger.error({"error": error_msg, "event": event})
+            raise ValueError(error_msg)
+
+        return {
+            "bucket": detail["bucket"]["name"],
+            "key": detail["object"]["key"],
+            "account_id": event.get("account", ""),
+            "event_name": event_name,
+        }
+
+    # S3 Notification format - has s3 field with bucket and object
+    elif "s3" in event and "eventName" in event:
+        return {
+            "bucket": event["s3"]["bucket"]["name"],
+            "key": event["s3"]["object"]["key"],
+            "account_id": event.get("userIdentity", {}).get("accountId", ""),
+            "event_name": event["eventName"],
+        }
+
+    else:
+        # Unknown event format - this is a failure
+        error_msg = "Unknown event format, missing required fields"
+        logger.error({"error": error_msg, "event": event})
+        raise ValueError(error_msg)
+
+
+def lambda_handler(incoming_event: Dict[str, Any], _) -> int:  # noqa: ANN001
     try:
-        for record in s3_notification_event["Records"]:
-            event_name: str = record["eventName"]
-            if "Digest" in record["s3"]["object"]["key"]:
-                return 200
+        # Detect format and convert to list of records
+        if "Records" in incoming_event:
+            # S3 notification format with Records array
+            records = incoming_event["Records"]
+        elif "detail-type" in incoming_event:
+            # EventBridge format (single event)
+            records = [incoming_event]
+        else:
+            logger.error({"Unknown event format": incoming_event})
+            return 400
 
-            if event_name.startswith("ObjectRemoved"):
-                handle_removed_object_record(
-                    record=record,
-                )
+        for record in records:
+            s3_info = extract_s3_info(record)
+
+            # Skip digest files
+            if "Digest" in s3_info["key"]:
                 continue
 
-            elif event_name.startswith("ObjectCreated"):
-                handle_created_object_record(
-                    record=record,
-                    cfg=cfg,
-                )
-                continue
+            if s3_info["event_name"].startswith("ObjectRemoved"):
+                handle_removed_object_record(s3_info)
+            elif s3_info["event_name"].startswith("ObjectCreated"):
+                handle_created_object_record(s3_info, cfg)
 
     except Exception as e:
         post_message(
-            message=message_for_slack_error_notification(e, s3_notification_event),
+            message=message_for_slack_error_notification(e, incoming_event),
             account_id=None,
             slack_config=slack_config,
         )
@@ -72,25 +128,31 @@ def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # no
     return 200
 
 
-def handle_removed_object_record(
-    record: dict,
-) -> None:
-    logger.info({"s3:ObjectRemoved event": record})
-    account_id = record.get("userIdentity", {}).get("accountId", "")
+def handle_removed_object_record(s3_info: dict) -> None:
+    logger.info({"s3:ObjectRemoved event": s3_info})
+    # Create a minimal event dict for slack message
+    event_dict = {
+        "eventName": s3_info["event_name"],
+        "userIdentity": {"accountId": s3_info["account_id"]},
+        "s3": {
+            "bucket": {"name": s3_info["bucket"]},
+            "object": {"key": s3_info["key"]}
+        }
+    }
     message = event_to_slack_message(
-        event=record,
-        source_file=record["s3"]["object"]["key"],
-        account_id_from_event=account_id,
+        event=event_dict,
+        source_file=s3_info["key"],
+        account_id_from_event=s3_info["account_id"],
     )
-    post_message(message=message, account_id=account_id, slack_config=slack_config)
+    post_message(message=message, account_id=s3_info["account_id"], slack_config=slack_config)
 
 
-def handle_created_object_record(
-    record: dict,
-    cfg: Config,
-) -> None:
-    logger.debug({"s3_notification_event": record})
-    cloudtrail_log_record = get_cloudtrail_log_records(record)
+def handle_created_object_record(s3_info: dict, cfg: Config) -> None:
+    logger.debug({"s3_notification_event": s3_info})
+    cloudtrail_log_record = get_cloudtrail_log_records(
+        bucket=s3_info["bucket"],
+        key=s3_info["key"]
+    )
     if cloudtrail_log_record:
         for cloudtrail_log_event in cloudtrail_log_record["events"]:
             handle_event(
@@ -101,15 +163,10 @@ def handle_created_object_record(
             )
 
 
-def get_cloudtrail_log_records(record: Dict) -> Dict | None:
-    # Get all the files from S3 so we can process them
-
-    # In case if we get something unexpected
-    if "s3" not in record:
-        raise AssertionError(f"received record does not contain s3 section: {record}")
-    bucket = record["s3"]["bucket"]["name"]
-    key = urllib.parse.unquote_plus(record["s3"]["object"]["key"], encoding="utf-8")  # type: ignore # noqa: PGH003, E501
-    # Do not process digest files
+def get_cloudtrail_log_records(bucket: str, key: str) -> Dict | None:
+    """Fetch and decompress CloudTrail log file from S3."""
+    # Decode URL-encoded key
+    key = urllib.parse.unquote_plus(key, encoding="utf-8")  # type: ignore # noqa: PGH003
     try:
         response = s3_client.get_object(Bucket=bucket, Key=key)
         with gzip.GzipFile(fileobj=response["Body"]) as gzipfile:

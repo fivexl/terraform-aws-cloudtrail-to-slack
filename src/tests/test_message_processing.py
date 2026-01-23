@@ -15,8 +15,8 @@ with open("tests/test_events.json") as f:
 
 
 @pytest.fixture(
-    params = data["test_events"],
-    ids = [event["test_event_name"] for event in data["test_events"]]
+    params = [event for event in data["test_events"] if event.get("event_format") != "eventbridge"],
+    ids = [event["test_event_name"] for event in data["test_events"] if event.get("event_format") != "eventbridge"]
 )
 def message_should_be_processed_test_cases(request):
     return request.param
@@ -61,7 +61,7 @@ def message_should_not_be_processed_test_cases(request):
                     "eventSource": "signin.amazonaws.com",
                     "eventName": "ConsoleLogin",
                     "awsRegion": "us-east-1",
-                    "sourceIPAddress": "83.41.208.104",
+                    "sourceIPAddress": "192.0.2.1",
                     "userAgent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0",
                     "requestParameters": "null",
                     "responseElements": {
