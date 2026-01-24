@@ -3,6 +3,10 @@ from unittest.mock import patch
 
 # ruff: noqa: ANN201, ANN001, E501
 
+# Test constants
+HTTP_SUCCESS_STATUS = 200
+EXPECTED_MULTIPLE_S3_RECORDS_COUNT = 3
+
 
 def test_sns_wrapped_s3_notification():
     """
@@ -23,34 +27,31 @@ def test_sns_wrapped_s3_notification():
                     "MessageId": "test-message-id",
                     "TopicArn": "arn:aws:sns:us-east-1:123456789012:cloudtrail-logs",
                     "Subject": "Amazon S3 Notification",
-                    "Message": json.dumps({
-                        "Records": [
-                            {
-                                "eventVersion": "2.1",
-                                "eventSource": "aws:s3",
-                                "awsRegion": "us-east-1",
-                                "eventTime": "2026-01-24T00:00:00.000Z",
-                                "eventName": "ObjectCreated:Put",
-                                "userIdentity": {
-                                    "principalId": "AWS:AIDAI123456789EXAMPLE"
-                                },
-                                "s3": {
-                                    "s3SchemaVersion": "1.0",
-                                    "bucket": {
-                                        "name": "test-cloudtrail-bucket",
-                                        "arn": "arn:aws:s3:::test-cloudtrail-bucket"
+                    "Message": json.dumps(
+                        {
+                            "Records": [
+                                {
+                                    "eventVersion": "2.1",
+                                    "eventSource": "aws:s3",
+                                    "awsRegion": "us-east-1",
+                                    "eventTime": "2026-01-24T00:00:00.000Z",
+                                    "eventName": "ObjectCreated:Put",
+                                    "userIdentity": {"principalId": "AWS:AIDAI123456789EXAMPLE"},
+                                    "s3": {
+                                        "s3SchemaVersion": "1.0",
+                                        "bucket": {"name": "test-cloudtrail-bucket", "arn": "arn:aws:s3:::test-cloudtrail-bucket"},
+                                        "object": {
+                                            "key": "AWSLogs/123456789012/CloudTrail/us-east-1/2026/01/24/test.json.gz",
+                                            "size": 1024,
+                                            "eTag": "d41d8cd98f00b204e9800998ecf8427e",
+                                        },
                                     },
-                                    "object": {
-                                        "key": "AWSLogs/123456789012/CloudTrail/us-east-1/2026/01/24/test.json.gz",
-                                        "size": 1024,
-                                        "eTag": "d41d8cd98f00b204e9800998ecf8427e"
-                                    }
                                 }
-                            }
-                        ]
-                    }),
-                    "Timestamp": "2026-01-24T00:00:00.000Z"
-                }
+                            ]
+                        }
+                    ),
+                    "Timestamp": "2026-01-24T00:00:00.000Z",
+                },
             }
         ]
     }
@@ -65,7 +66,7 @@ def test_sns_wrapped_s3_notification():
         called_record = mock_get_logs.call_args[0][0]
         assert called_record["s3"]["bucket"]["name"] == "test-cloudtrail-bucket"
         assert "AWSLogs" in called_record["s3"]["object"]["key"]
-        assert result == 200
+        assert result == HTTP_SUCCESS_STATUS
 
 
 def test_sns_with_multiple_s3_records():
@@ -77,32 +78,25 @@ def test_sns_with_multiple_s3_records():
             {
                 "EventSource": "aws:sns",
                 "Sns": {
-                    "Message": json.dumps({
-                        "Records": [
-                            {
-                                "eventName": "ObjectCreated:Put",
-                                "s3": {
-                                    "bucket": {"name": "test-bucket"},
-                                    "object": {"key": "AWSLogs/file1.json.gz"}
-                                }
-                            },
-                            {
-                                "eventName": "ObjectCreated:Put",
-                                "s3": {
-                                    "bucket": {"name": "test-bucket"},
-                                    "object": {"key": "AWSLogs/file2.json.gz"}
-                                }
-                            },
-                            {
-                                "eventName": "ObjectCreated:Put",
-                                "s3": {
-                                    "bucket": {"name": "test-bucket"},
-                                    "object": {"key": "AWSLogs/file3.json.gz"}
-                                }
-                            }
-                        ]
-                    })
-                }
+                    "Message": json.dumps(
+                        {
+                            "Records": [
+                                {
+                                    "eventName": "ObjectCreated:Put",
+                                    "s3": {"bucket": {"name": "test-bucket"}, "object": {"key": "AWSLogs/file1.json.gz"}},
+                                },
+                                {
+                                    "eventName": "ObjectCreated:Put",
+                                    "s3": {"bucket": {"name": "test-bucket"}, "object": {"key": "AWSLogs/file2.json.gz"}},
+                                },
+                                {
+                                    "eventName": "ObjectCreated:Put",
+                                    "s3": {"bucket": {"name": "test-bucket"}, "object": {"key": "AWSLogs/file3.json.gz"}},
+                                },
+                            ]
+                        }
+                    )
+                },
             }
         ]
     }
@@ -113,31 +107,22 @@ def test_sns_with_multiple_s3_records():
         result = lambda_handler(sns_event, None)
 
         # Should be called 3 times (once for each S3 record) in ONE Lambda invocation
-        assert mock_get_logs.call_count == 3
-        assert result == 200
+        assert mock_get_logs.call_count == EXPECTED_MULTIPLE_S3_RECORDS_COUNT
+        assert result == HTTP_SUCCESS_STATUS
 
 
 def test_sns_with_invalid_json_message():
     """Test that invalid JSON in SNS message is handled gracefully."""
     from main import lambda_handler
 
-    sns_event = {
-        "Records": [
-            {
-                "EventSource": "aws:sns",
-                "Sns": {
-                    "Message": "invalid json {"
-                }
-            }
-        ]
-    }
+    sns_event = {"Records": [{"EventSource": "aws:sns", "Sns": {"Message": "invalid json {"}}]}
 
     with patch("main.logger") as mock_logger:
         result = lambda_handler(sns_event, None)
 
         # Should log error but not crash
         assert mock_logger.error.called
-        assert result == 200
+        assert result == HTTP_SUCCESS_STATUS
 
 
 def test_direct_s3_notification():
@@ -151,9 +136,9 @@ def test_direct_s3_notification():
                 "eventSource": "aws:s3",
                 "s3": {
                     "bucket": {"name": "test-cloudtrail-bucket"},
-                    "object": {"key": "AWSLogs/123456789012/CloudTrail/us-east-1/2026/01/24/file.json.gz"}
+                    "object": {"key": "AWSLogs/123456789012/CloudTrail/us-east-1/2026/01/24/file.json.gz"},
                 },
-                "userIdentity": {"accountId": "123456789012"}
+                "userIdentity": {"accountId": "123456789012"},
             }
         ]
     }
@@ -165,7 +150,7 @@ def test_direct_s3_notification():
 
         # Should process the S3 record directly
         assert mock_get_logs.called
-        assert result == 200
+        assert result == HTTP_SUCCESS_STATUS
 
 
 def test_sns_digest_files_are_skipped():
@@ -177,18 +162,20 @@ def test_sns_digest_files_are_skipped():
             {
                 "EventSource": "aws:sns",
                 "Sns": {
-                    "Message": json.dumps({
-                        "Records": [
-                            {
-                                "eventName": "ObjectCreated:Put",
-                                "s3": {
-                                    "bucket": {"name": "test-bucket"},
-                                    "object": {"key": "AWSLogs/123/CloudTrail-Digest/file.json.gz"}
+                    "Message": json.dumps(
+                        {
+                            "Records": [
+                                {
+                                    "eventName": "ObjectCreated:Put",
+                                    "s3": {
+                                        "bucket": {"name": "test-bucket"},
+                                        "object": {"key": "AWSLogs/123/CloudTrail-Digest/file.json.gz"},
+                                    },
                                 }
-                            }
-                        ]
-                    })
-                }
+                            ]
+                        }
+                    )
+                },
             }
         ]
     }
@@ -198,4 +185,4 @@ def test_sns_digest_files_are_skipped():
 
         # Should NOT call get_cloudtrail_log_records for digest files
         assert not mock_get_logs.called
-        assert result == 200
+        assert result == HTTP_SUCCESS_STATUS

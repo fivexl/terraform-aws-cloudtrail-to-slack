@@ -267,7 +267,7 @@ Use `lambda_function_arn` output to get the Lambda destination.
 
 # Terraform specs
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -296,9 +296,13 @@ Use `lambda_function_arn` output to get the Lambda destination.
 | Name | Type |
 |------|------|
 | [aws_lambda_permission.s3](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
+| [aws_lambda_permission.sns](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
 | [aws_s3_bucket_notification.bucket_notification](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_notification) | resource |
 | [aws_sns_topic.events_to_sns](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic) | resource |
+| [aws_sns_topic.s3_notifications](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic) | resource |
+| [aws_sns_topic_policy.s3_notifications](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_policy) | resource |
 | [aws_sns_topic_subscription.events_to_sns](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_subscription) | resource |
+| [aws_sns_topic_subscription.lambda](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_subscription) | resource |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
 | [aws_iam_policy_document.s3](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_kms_key.cloudtrail](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/kms_key) | data source |
@@ -315,6 +319,7 @@ Use `lambda_function_arn` output to get the Lambda destination.
 | <a name="input_cloudtrail_logs_s3_bucket_name"></a> [cloudtrail\_logs\_s3\_bucket\_name](#input\_cloudtrail\_logs\_s3\_bucket\_name) | Name of the CloudWatch log s3 bucket that contains CloudTrail events | `string` | n/a | yes |
 | <a name="input_configuration"></a> [configuration](#input\_configuration) | Allows the configuration of the Slack webhook URL per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization. | <pre>list(object({<br>    accounts       = list(string)<br>    slack_hook_url = string<br>  }))</pre> | `null` | no |
 | <a name="input_create_bucket_notification"></a> [create\_bucket\_notification](#input\_create\_bucket\_notification) | Whether to create S3 bucket notification for CloudTrail logs | `bool` | `true` | no |
+| <a name="input_create_sns_topic_notifications"></a> [create\_sns\_topic\_notifications](#input\_create\_sns\_topic\_notifications) | Whether to create SNS topic for S3 notifications. Only used when use\_sns\_topic\_notifications=true. If false, you must provide sns\_topic\_arn\_for\_notifications. | `bool` | `true` | no |
 | <a name="input_dead_letter_target_arn"></a> [dead\_letter\_target\_arn](#input\_dead\_letter\_target\_arn) | The ARN of an SNS topic or SQS queue to notify when an invocation fails. | `string` | `null` | no |
 | <a name="input_default_slack_channel_id"></a> [default\_slack\_channel\_id](#input\_default\_slack\_channel\_id) | The Slack channel ID to be used if the AWS account ID does not match any account ID in the configuration variable. | `string` | `null` | no |
 | <a name="input_default_slack_hook_url"></a> [default\_slack\_hook\_url](#input\_default\_slack\_hook\_url) | The Slack incoming webhook URL to be used if the AWS account ID does not match any account ID in the configuration variable. | `string` | `null` | no |
@@ -340,15 +345,20 @@ Use `lambda_function_arn` output to get the Lambda destination.
 | <a name="input_slack_app_configuration"></a> [slack\_app\_configuration](#input\_slack\_app\_configuration) | Allows the configuration of the Slack app per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization. | <pre>list(object({<br>    accounts         = list(string)<br>    slack_channel_id = string<br>  }))</pre> | `null` | no |
 | <a name="input_slack_bot_token"></a> [slack\_bot\_token](#input\_slack\_bot\_token) | The Slack bot token used for sending messages to Slack. | `string` | `null` | no |
 | <a name="input_sns_configuration"></a> [sns\_configuration](#input\_sns\_configuration) | Allows the configuration of the SNS topic per account(s). | <pre>list(object({<br>    accounts      = list(string)<br>    sns_topic_arn = string<br>  }))</pre> | `null` | no |
+| <a name="input_sns_topic_arn_for_notifications"></a> [sns\_topic\_arn\_for\_notifications](#input\_sns\_topic\_arn\_for\_notifications) | ARN of existing SNS topic to use for S3 notifications. Only used when use\_sns\_topic\_notifications=true and create\_sns\_topic\_notifications=false. | `string` | `null` | no |
+| <a name="input_sns_topic_name_for_notifications"></a> [sns\_topic\_name\_for\_notifications](#input\_sns\_topic\_name\_for\_notifications) | Name of SNS topic to create for S3 notifications. Only used when create\_sns\_topic\_notifications=true. | `string` | `"cloudtrail-s3-notifications"` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags to attach to resources | `map(string)` | `{}` | no |
 | <a name="input_use_default_rules"></a> [use\_default\_rules](#input\_use\_default\_rules) | Should default rules be used | `bool` | `true` | no |
+| <a name="input_use_sns_topic_notifications"></a> [use\_sns\_topic\_notifications](#input\_use\_sns\_topic\_notifications) | Whether to use SNS topic for S3 notifications (allows multiple Lambda consumers). When true, S3 sends events to SNS which fans out to Lambda. Note: Lambda endpoints do NOT support raw\_message\_delivery, so SNS messages are automatically unwrapped by the Lambda code. | `bool` | `false` | no |
 
 ## Outputs
 
 | Name | Description |
 |------|-------------|
 | <a name="output_lambda_function_arn"></a> [lambda\_function\_arn](#output\_lambda\_function\_arn) | The ARN of the Lambda Function |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+| <a name="output_sns_topic_arn_for_notifications"></a> [sns\_topic\_arn\_for\_notifications](#output\_sns\_topic\_arn\_for\_notifications) | ARN of the SNS topic created for S3 notifications (if created by this module). |
+| <a name="output_sns_topic_name_for_notifications"></a> [sns\_topic\_name\_for\_notifications](#output\_sns\_topic\_name\_for\_notifications) | Name of the SNS topic created for S3 notifications (if created by this module). |
+<!-- END_TF_DOCS -->
 
 ## License
 

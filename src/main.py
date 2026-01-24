@@ -79,7 +79,7 @@ def lambda_handler(incoming_event: Dict[str, Any], _) -> int:  # noqa: ANN001
         for record in s3_notification_event["Records"]:
             event_name: str = record["eventName"]
             if "Digest" in record["s3"]["object"]["key"]:
-                return 200
+                continue
 
             if event_name.startswith("ObjectRemoved"):
                 handle_removed_object_record(
@@ -177,9 +177,7 @@ def should_message_be_processed(
     for ignore_rule in ignore_rules:
         try:
             if eval(ignore_rule, {}, {"event": flat_event}) is True:  # noqa: PGH001
-                logger.info(
-                    {"Event matched ignore rule and will not be processed": {"ignore_rule": ignore_rule, "flat_event": flat_event}}
-                )  # noqa: E501
+                logger.info({"Event matched ignore rule and will not be processed": {"ignore_rule": ignore_rule, "flat_event": flat_event}})  # noqa: E501
                 return ProcessingResult(should_be_processed=False, errors=errors, is_ignored=True)
         except Exception as e:
             logger.exception({"Event parsing failed": {"error": e, "ignore_rule": ignore_rule, "flat_event": flat_event}})  # noqa: E501
@@ -194,7 +192,9 @@ def should_message_be_processed(
             logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}})
             errors.append({"error": e, "rule": rule})
 
-    logger.info({"Event did not match any rules and will not be processed": {"event": event_name, "user": event.get("userIdentity", "N/A")}})  # noqa: E501
+    logger.info(
+        {"Event did not match any rules and will not be processed": {"event": event_name, "user": event.get("userIdentity", "N/A")}}
+    )  # noqa: E501
     return ProcessingResult(False, errors)
 
 
