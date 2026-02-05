@@ -47,9 +47,9 @@ module "cloudtrail_to_slack" {
   source = "fivexl/cloudtrail-to-slack/aws"
 
   # SNS Configuration
-  use_sns_topic_notifications    = true  # Enable SNS fan-out
-  create_sns_topic_notifications = true  # Create SNS topic
-  sns_topic_name_for_notifications = "cloudtrail-s3-events"
+  enable_s3_sns_fanout       = true  # Enable SNS fan-out
+  create_s3_sns_fanout_topic = true  # Create SNS topic
+  s3_sns_fanout_topic_name   = "cloudtrail-s3-events"
 
   # Other configuration...
 }
@@ -60,10 +60,11 @@ module "cloudtrail_to_slack" {
 ```hcl
 # Subscribe additional Lambda to the SNS topic
 resource "aws_sns_topic_subscription" "another_consumer" {
-  topic_arn            = module.cloudtrail_to_slack.sns_topic_arn_for_notifications
-  protocol             = "lambda"
-  endpoint             = aws_lambda_function.another_lambda.arn
-  raw_message_delivery = true  # REQUIRED!
+  topic_arn = module.cloudtrail_to_slack.s3_sns_fanout_topic_arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.another_lambda.arn
+  # Note: raw_message_delivery is NOT supported for Lambda protocol
+  # Cloudtrail to Slack Lambda will unwrap the SNS envelope automatically.
 }
 ```
 
@@ -113,12 +114,15 @@ resource "aws_sns_topic_policy" "cloudtrail_events" {
 module "cloudtrail_to_slack" {
   source = "fivexl/cloudtrail-to-slack/aws"
 
-  use_sns_topic_notifications    = true   # Enable SNS
-  create_sns_topic_notifications = false  # Don't create, use existing
-  sns_topic_arn_for_notifications = aws_sns_topic.cloudtrail_events.arn
+  enable_s3_sns_fanout       = true   # Enable SNS
+  create_s3_sns_fanout_topic = false  # Don't create, use existing
+  s3_sns_fanout_topic_arn    = aws_sns_topic.cloudtrail_events.arn
 
   # Other configuration...
 }
+
+# Use s3_sns_fanout_topic_arn to add more subscribers (should work for both created and external topics)
+# module.cloudtrail_to_slack.s3_sns_fanout_topic_arn
 ```
 
 ## Benefits
@@ -128,24 +132,13 @@ module "cloudtrail_to_slack" {
 | **Multiple Consumers** | ❌ No (1 only) | ✅ Yes (unlimited) |
 | **Event Batching** | ✅ Yes | ✅ Yes (maintained!) |
 | **Lambda Invocations** | Low | Low (same as direct) |
-| **Cost** | Lowest | +$0.50 per 1M events |
-| **Code Changes** | None | None |
+| **Cost** | Lowest | SNS -> Lambda delivery free; S3 ->SNS API requests $0.50/million |
 
-## Cost Example
-
-With 10,000 CloudTrail files per month and 3 Lambda consumers:
-
-**SNS Fan-Out:**
 - ~2,000 batched S3 notifications
 - 6,000 Lambda invocations (2,000 × 3 consumers)
-- Cost: ~$1.20 Lambda + $0.005 SNS = **$1.205/month**
+- Cost: ~$1.20 Lambda + $0.005 SNS = **$1.205/
 
-**Alternative (EventBridge):**
-- 10,000 individual events
-- 30,000 Lambda invocations (10,000 × 3 consumers)
-- Cost: ~**$6.00/month**
-
-**SNS is 5x cheaper!**
+> For current pricing, see [AWS Lambda Pricing](https://aws.amazon.com/lambda/pricing/) and [AWS SNS Pricing](https://aws.amazon.com/sns/pricing/).
 
 ## Usage
 
@@ -157,12 +150,11 @@ terraform apply
 
 ## Outputs
 
-- `sns_topic_arn_for_notifications` - ARN of the created SNS topic (if created)
-- `sns_topic_name_for_notifications` - Name of the created SNS topic (if created)
+- `s3_sns_fanout_topic_arn` - ARN of the SNS topic (use this to add more subscribers)
+- `s3_sns_fanout_topic_name` - Name of the SNS topic (only when module creates the topic)
 
-Use these outputs to subscribe additional consumers.
 
 ## See Also
 
-- [Detailed SNS Documentation](../../src/docs/sns-support.md)
+- [SNS Fan-Out Documentation](../../docs/SNS_FANOUT.md)
 - [Main Module README](../../README.md)

@@ -170,14 +170,14 @@ data "aws_region" "current" {}
 
 # SNS Topic for S3 notifications (optional - for fan-out pattern)
 resource "aws_sns_topic" "s3_notifications" {
-  count = var.use_sns_topic_notifications && var.create_sns_topic_notifications ? 1 : 0
-  name  = var.sns_topic_name_for_notifications
+  count = var.enable_s3_sns_fanout && var.create_s3_sns_fanout_topic ? 1 : 0
+  name  = var.s3_sns_fanout_topic_name
   tags  = var.tags
 }
 
 # SNS Topic Policy - Allow S3 to publish
 resource "aws_sns_topic_policy" "s3_notifications" {
-  count = var.use_sns_topic_notifications && var.create_sns_topic_notifications ? 1 : 0
+  count = var.enable_s3_sns_fanout && var.create_s3_sns_fanout_topic ? 1 : 0
   arn   = aws_sns_topic.s3_notifications[0].arn
 
   policy = jsonencode({
@@ -203,7 +203,7 @@ resource "aws_sns_topic_policy" "s3_notifications" {
 
 # Lambda permission for direct S3 invocation
 resource "aws_lambda_permission" "s3" {
-  count          = var.use_sns_topic_notifications ? 0 : 1
+  count          = var.enable_s3_sns_fanout ? 0 : 1
   statement_id   = "AllowExecutionFromS3Bucket"
   action         = "lambda:InvokeFunction"
   function_name  = module.lambda.lambda_function_name
@@ -214,18 +214,18 @@ resource "aws_lambda_permission" "s3" {
 
 # Lambda permission for SNS invocation
 resource "aws_lambda_permission" "sns" {
-  count         = var.use_sns_topic_notifications ? 1 : 0
+  count         = var.enable_s3_sns_fanout ? 1 : 0
   statement_id  = "AllowExecutionFromSNS"
   action        = "lambda:InvokeFunction"
   function_name = module.lambda.lambda_function_name
   principal     = "sns.amazonaws.com"
-  source_arn    = var.create_sns_topic_notifications ? aws_sns_topic.s3_notifications[0].arn : var.sns_topic_arn_for_notifications
+  source_arn    = var.create_s3_sns_fanout_topic ? aws_sns_topic.s3_notifications[0].arn : var.s3_sns_fanout_topic_arn
 }
 
 # SNS Subscription - Subscribe Lambda to SNS topic
 resource "aws_sns_topic_subscription" "lambda" {
-  count     = var.use_sns_topic_notifications ? 1 : 0
-  topic_arn = var.create_sns_topic_notifications ? aws_sns_topic.s3_notifications[0].arn : var.sns_topic_arn_for_notifications
+  count     = var.enable_s3_sns_fanout ? 1 : 0
+  topic_arn = var.create_s3_sns_fanout_topic ? aws_sns_topic.s3_notifications[0].arn : var.s3_sns_fanout_topic_arn
   protocol  = "lambda"
   endpoint  = module.lambda.lambda_function_arn
   # Note: raw_message_delivery is NOT supported for Lambda endpoints
@@ -239,7 +239,7 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
 
   # Direct Lambda notification (when NOT using SNS)
   dynamic "lambda_function" {
-    for_each = var.use_sns_topic_notifications ? [] : [1]
+    for_each = var.enable_s3_sns_fanout ? [] : [1]
     content {
       lambda_function_arn = module.lambda.lambda_function_arn
       events              = var.s3_removed_object_notification ? ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"] : ["s3:ObjectCreated:*"]
@@ -250,9 +250,9 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
 
   # SNS topic notification (when using SNS)
   dynamic "topic" {
-    for_each = var.use_sns_topic_notifications ? [1] : []
+    for_each = var.enable_s3_sns_fanout ? [1] : []
     content {
-      topic_arn     = var.create_sns_topic_notifications ? aws_sns_topic.s3_notifications[0].arn : var.sns_topic_arn_for_notifications
+      topic_arn     = var.create_s3_sns_fanout_topic ? aws_sns_topic.s3_notifications[0].arn : var.s3_sns_fanout_topic_arn
       events        = var.s3_removed_object_notification ? ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"] : ["s3:ObjectCreated:*"]
       filter_prefix = var.s3_notification_filter_prefix
       filter_suffix = ".json.gz"

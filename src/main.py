@@ -55,7 +55,12 @@ def lambda_handler(incoming_event: Dict[str, Any], _) -> int:  # noqa: ANN001
     # This ensures error handler receives proper S3 notification format
     records = incoming_event.get("Records", [])
 
-    if records and records[0].get("EventSource") == "aws:sns":
+    if not records:
+        logger.warning({"Received event with no Records": incoming_event})
+        return 200
+
+    # SNS uses "EventSource", S3 uses "eventSource" - check for SNS format
+    if records[0].get("EventSource") == "aws:sns":
         # SNS format: S3 -> SNS -> Lambda
         # Extract S3 notification from SNS message
         s3_records = []

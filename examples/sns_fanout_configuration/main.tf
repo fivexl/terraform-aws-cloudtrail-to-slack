@@ -12,9 +12,9 @@ module "cloudtrail_to_slack" {
   cloudtrail_logs_s3_bucket_name = "my-cloudtrail-logs-bucket"
 
   # SNS Configuration - Enable SNS fan-out pattern
-  use_sns_topic_notifications      = true # Use SNS instead of direct S3 notification
-  create_sns_topic_notifications   = true # Create SNS topic in this module
-  sns_topic_name_for_notifications = "cloudtrail-s3-events"
+  enable_s3_sns_fanout       = true # Use SNS instead of direct S3 notification
+  create_s3_sns_fanout_topic = true # Create SNS topic in this module
+  s3_sns_fanout_topic_name   = "cloudtrail-s3-events"
 
   # Slack Configuration
   default_slack_hook_url = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
@@ -54,7 +54,7 @@ resource "aws_iam_role" "archive_lambda" {
 
 # Subscribe the archive Lambda to the same SNS topic
 resource "aws_sns_topic_subscription" "archive_lambda" {
-  topic_arn = module.cloudtrail_to_slack.sns_topic_arn_for_notifications
+  topic_arn = module.cloudtrail_to_slack.s3_sns_fanout_topic_arn
   protocol  = "lambda"
   endpoint  = aws_lambda_function.archive_to_glacier.arn
   # Note: raw_message_delivery is NOT supported for Lambda protocol
@@ -66,13 +66,13 @@ resource "aws_lambda_permission" "allow_sns_archive" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.archive_to_glacier.function_name
   principal     = "sns.amazonaws.com"
-  source_arn    = module.cloudtrail_to_slack.sns_topic_arn_for_notifications
+  source_arn    = module.cloudtrail_to_slack.s3_sns_fanout_topic_arn
 }
 
 # You can add more subscribers as needed...
 # resource "aws_sns_topic_subscription" "security_analysis" {
-#   topic_arn            = module.cloudtrail_to_slack.sns_topic_arn_for_notifications
-#   protocol             = "lambda"
-#   endpoint             = aws_lambda_function.security_analysis.arn
-#   raw_message_delivery = true
+#   topic_arn = module.cloudtrail_to_slack.s3_sns_fanout_topic_arn
+#   protocol  = "lambda"
+#   endpoint  = aws_lambda_function.security_analysis.arn
+#   # Note: raw_message_delivery is NOT supported for Lambda protocol
 # }

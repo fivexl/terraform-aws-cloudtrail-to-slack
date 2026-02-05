@@ -19,6 +19,7 @@
   - [Slack App (Recommended)](#slack-app-recommended)
   - [Slack Webhook](#slack-webhook)
   - [AWS SNS](#aws-sns)
+  - [SNS Fan-Out Pattern (Multiple Consumers)](#sns-fan-out-pattern-multiple-consumers)
 - [Rules](#rules)
   - [Default rules:](#default-rules)
 - [Cloudwatch metrics](#cloudwatch-metrics)
@@ -80,6 +81,43 @@ The module has three variants of notification delivery:
 - An optional feature that allows sending notifications to an AWS SNS topic. It can be used alongside either the Slack App or Slack Webhook.
 
 All three variants of notification delivery support separating notifications into different Slack channels or SNS topics based on event account ID.
+
+## SNS Fan-Out Pattern (Multiple Consumers)
+
+If you need **multiple services to consume the same CloudTrail S3 events** (e.g., this module + an archival Lambda + a security analysis Lambda), use the SNS fan-out pattern. AWS S3 bucket notifications can only send events to one destination per event type, but SNS allows unlimited subscribers.
+
+### Quick Setup
+
+```hcl
+module "cloudtrail_to_slack" {
+  source = "fivexl/cloudtrail-to-slack/aws"
+
+  # Enable SNS fan-out
+  enable_s3_sns_fanout       = true
+  create_s3_sns_fanout_topic = true
+
+  # Other configuration...
+}
+
+# Use s3_sns_fanout_topic_arn to subscribe additional consumers
+resource "aws_sns_topic_subscription" "another_consumer" {
+  topic_arn = module.cloudtrail_to_slack.s3_sns_fanout_topic_arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.another.arn
+}
+```
+
+### Key Variables
+
+| Variable | Description |
+|----------|-------------|
+| `enable_s3_sns_fanout` | Enable SNS fan-out pattern (default: `false`) |
+| `create_s3_sns_fanout_topic` | Create SNS topic in module (default: `true`) |
+| `s3_sns_fanout_topic_arn` | External SNS topic ARN (when not creating) |
+
+For detailed documentation and examples, see:
+- [SNS Fan-Out Documentation](docs/SNS_FANOUT.md)
+- [SNS Fan-Out Example](examples/sns_fanout_configuration/)
 
 # Rules
 

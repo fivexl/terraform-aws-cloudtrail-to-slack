@@ -229,26 +229,26 @@ variable "enable_eventbridge_notificaitons" {
   type        = bool
 }
 
-variable "use_sns_topic_notifications" {
-  description = "Whether to use SNS topic for S3 notifications (allows multiple Lambda consumers). When true, S3 sends events to SNS which fans out to Lambda. Note: Lambda endpoints do NOT support raw_message_delivery, so SNS messages are automatically unwrapped by the Lambda code."
+variable "enable_s3_sns_fanout" {
+  description = "Enable SNS fan-out pattern for S3 notifications (allows multiple Lambda consumers). When true, S3 sends events to SNS which fans out to subscribers. Note: Lambda endpoints do NOT support raw_message_delivery, so SNS messages are automatically unwrapped by the Lambda code."
   default     = false
   type        = bool
 }
 
-variable "create_sns_topic_notifications" {
-  description = "Whether to create SNS topic for S3 notifications. Only used when use_sns_topic_notifications=true. If false, you must provide sns_topic_arn_for_notifications."
+variable "create_s3_sns_fanout_topic" {
+  description = "Whether to create SNS topic for S3 fan-out. Only used when enable_s3_sns_fanout=true. If false, you must provide s3_sns_fanout_topic_arn."
   default     = true
   type        = bool
 }
 
-variable "sns_topic_arn_for_notifications" {
-  description = "ARN of existing SNS topic to use for S3 notifications. Only used when use_sns_topic_notifications=true and create_sns_topic_notifications=false."
+variable "s3_sns_fanout_topic_arn" {
+  description = "ARN of existing SNS topic to use for S3 fan-out. Only used when enable_s3_sns_fanout=true and create_s3_sns_fanout_topic=false."
   default     = null
   type        = string
 }
 
-variable "sns_topic_name_for_notifications" {
-  description = "Name of SNS topic to create for S3 notifications. Only used when create_sns_topic_notifications=true."
+variable "s3_sns_fanout_topic_name" {
+  description = "Name of SNS topic to create for S3 fan-out. Only used when create_s3_sns_fanout_topic=true."
   default     = "cloudtrail-s3-notifications"
   type        = string
 }

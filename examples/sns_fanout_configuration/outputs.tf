@@ -3,12 +3,12 @@ output "lambda_function_arn" {
   value       = module.cloudtrail_to_slack.lambda_function_arn
 }
 
-output "sns_topic_arn" {
-  description = "ARN of the SNS topic for S3 notifications (use this to add more subscribers)"
-  value       = module.cloudtrail_to_slack.sns_topic_arn_for_notifications
+output "s3_sns_fanout_topic_arn" {
+  description = "ARN of the SNS topic for S3 fan-out (use this to add more subscribers)"
+  value       = module.cloudtrail_to_slack.s3_sns_fanout_topic_arn
 }
 
-output "sns_topic_name" {
-  description = "Name of the SNS topic for S3 notifications"
-  value       = module.cloudtrail_to_slack.sns_topic_name_for_notifications
+output "s3_sns_fanout_topic_name" {
+  description = "Name of the SNS topic for S3 fan-out (only available when module creates the topic)"
+  value       = module.cloudtrail_to_slack.s3_sns_fanout_topic_name
 }

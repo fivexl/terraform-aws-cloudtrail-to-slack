@@ -29,9 +29,8 @@ CloudTrail → S3 → SNS Topic → Lambda (CloudTrail-to-Slack)
 
 ✅ **Multiple Consumers** - Unlimited subscribers to the same S3 events  
 ✅ **Event Batching Maintained** - 5 files = 1 Lambda invocation (not 5)  
-✅ **Low Cost** - Only ~$0.50 per million events added  
-✅ **Zero Code Changes** - Lambda code works identically  
-✅ **Simple Setup** - Just set `use_sns_topic_notifications = true`  
+✅ **Low Cost** - SNS to Lambda delivery is free; only pay for API requests ($0.50/million after free tier)  
+✅ **Simple Setup** - Just set `enable_s3_sns_fanout = true`  
 
 ## Configuration
 
@@ -47,26 +46,27 @@ module "cloudtrail_to_slack" {
   default_slack_hook_url         = "https://hooks.slack.com/services/..."
 
   # Enable SNS fan-out
-  use_sns_topic_notifications      = true
-  create_sns_topic_notifications   = true
-  sns_topic_name_for_notifications = "cloudtrail-s3-events"
+  enable_s3_sns_fanout      = true
+  create_s3_sns_fanout_topic = true
+  s3_sns_fanout_topic_name  = "cloudtrail-s3-events"
 
   use_default_rules = true
 }
 
 # Add more consumers to the SNS topic
 resource "aws_sns_topic_subscription" "archive_lambda" {
-  topic_arn            = module.cloudtrail_to_slack.sns_topic_arn_for_notifications
-  protocol             = "lambda"
-  endpoint             = aws_lambda_function.archive.arn
-  raw_message_delivery = true  # REQUIRED!
+  topic_arn = module.cloudtrail_to_slack.s3_sns_fanout_topic_arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.archive.arn
+  # Note: raw_message_delivery is NOT supported for Lambda protocol.
+  # Lambda always receives SNS envelope and must unwrap it.
 }
 
 resource "aws_lambda_permission" "allow_sns_archive" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.archive.function_name
   principal     = "sns.amazonaws.com"
-  source_arn    = module.cloudtrail_to_slack.sns_topic_arn_for_notifications
+  source_arn    = module.cloudtrail_to_slack.s3_sns_fanout_topic_arn
 }
 ```
 
@@ -108,89 +108,60 @@ module "cloudtrail_to_slack" {
   default_slack_hook_url         = "https://hooks.slack.com/services/..."
 
   # Use external SNS topic
-  use_sns_topic_notifications     = true
-  create_sns_topic_notifications  = false
-  sns_topic_arn_for_notifications = aws_sns_topic.cloudtrail_events.arn
+  enable_s3_sns_fanout       = true
+  create_s3_sns_fanout_topic = false
+  s3_sns_fanout_topic_arn    = aws_sns_topic.cloudtrail_events.arn
 
   use_default_rules = true
 }
 ```
 
-## Important: raw_message_delivery = true
+## Important: Understanding SNS Message Delivery
 
-**Always set `raw_message_delivery = true` on SNS subscriptions!**
+### Lambda Endpoints (No raw_message_delivery)
+
+**AWS SNS does NOT support `raw_message_delivery` for Lambda endpoints.** Lambda always receives messages wrapped in an SNS envelope. The CloudTrail-to-Slack Lambda automatically detects and unwraps SNS messages, so this works transparently.
 
 ```hcl
 resource "aws_sns_topic_subscription" "lambda" {
-  topic_arn            = aws_sns_topic.cloudtrail_events.arn
-  protocol             = "lambda"
-  endpoint             = aws_lambda_function.my_lambda.arn
-  raw_message_delivery = true  # ← REQUIRED!
+  topic_arn = aws_sns_topic.cloudtrail_events.arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.my_lambda.arn
+  # raw_message_delivery is NOT supported for Lambda protocol
 }
 ```
 
-### Why raw_message_delivery = true?
+### SQS, HTTP/HTTPS Endpoints (raw_message_delivery available)
 
-When enabled, SNS delivers the S3 notification **exactly as received** without wrapping it in an SNS envelope. This means:
-- Lambda receives the same format as direct S3 notifications
-- No code changes needed
-- No JSON parsing overhead
-- Simpler and more efficient
+For **SQS** and **HTTP/HTTPS** endpoints, you can optionally set `raw_message_delivery = true` to receive the S3 notification without the SNS envelope:
+
+```hcl
+resource "aws_sns_topic_subscription" "sqs" {
+  topic_arn            = aws_sns_topic.cloudtrail_events.arn
+  protocol             = "sqs"
+  endpoint             = aws_sqs_queue.my_queue.arn
+  raw_message_delivery = true  # Supported for SQS
+}
+```
 
 ## Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `use_sns_topic_notifications` | Enable SNS fan-out pattern | `false` |
-| `create_sns_topic_notifications` | Create SNS topic in module | `true` |
-| `sns_topic_arn_for_notifications` | External SNS topic ARN (if not creating) | `null` |
-| `sns_topic_name_for_notifications` | Name for created SNS topic | `"cloudtrail-s3-notifications"` |
+| `enable_s3_sns_fanout` | Enable SNS fan-out pattern | `false` |
+| `create_s3_sns_fanout_topic` | Create SNS topic in module | `true` |
+| `s3_sns_fanout_topic_arn` | External SNS topic ARN (if not creating) | `null` |
+| `s3_sns_fanout_topic_name` | Name for created SNS topic | `"cloudtrail-s3-notifications"` |
 
 ## Outputs
 
 | Output | Description |
 |--------|-------------|
-| `sns_topic_arn_for_notifications` | ARN of SNS topic (if created) |
-| `sns_topic_name_for_notifications` | Name of SNS topic (if created) |
+| `s3_sns_fanout_topic_arn` | ARN of the SNS topic (created or external) |
+| `s3_sns_fanout_topic_name` | Name of SNS topic (only if created by module) |
 
-Use these outputs to subscribe additional consumers.
+Use `s3_sns_fanout_topic_arn` to subscribe additional consumers - it works for both created and external topics.
 
-## Migration from Direct S3
-
-### Before (Direct S3 → Lambda)
-
-```hcl
-module "cloudtrail_to_slack" {
-  source = "fivexl/cloudtrail-to-slack/aws"
-  
-  # Default: direct S3 notification
-  cloudtrail_logs_s3_bucket_name = "my-cloudtrail-logs"
-  default_slack_hook_url         = "https://hooks.slack.com/..."
-}
-```
-
-### After (S3 → SNS → Lambda)
-
-```hcl
-module "cloudtrail_to_slack" {
-  source = "fivexl/cloudtrail-to-slack/aws"
-  
-  cloudtrail_logs_s3_bucket_name = "my-cloudtrail-logs"
-  default_slack_hook_url         = "https://hooks.slack.com/..."
-  
-  # Add these two lines:
-  use_sns_topic_notifications    = true
-  create_sns_topic_notifications = true
-}
-
-# Now add more consumers:
-resource "aws_sns_topic_subscription" "another_lambda" {
-  topic_arn            = module.cloudtrail_to_slack.sns_topic_arn_for_notifications
-  protocol             = "lambda"
-  endpoint             = aws_lambda_function.another.arn
-  raw_message_delivery = true
-}
-```
 
 ## Event Batching Example
 
@@ -201,7 +172,7 @@ When CloudTrail writes 5 log files:
   ↓
 1 S3 notification (Records array with 5 items)
   ↓
-SNS Topic (raw_message_delivery=true)
+SNS Topic
   ↓
 3 Lambda subscribers
   ↓
@@ -218,21 +189,27 @@ Compare to EventBridge:
 
 ## Cost Comparison
 
-Assuming 10,000 CloudTrail files per month with 3 Lambda consumers:
+With 3 Lambda consumers processing the same CloudTrail events:
 
-| Pattern | Lambda Invocations | Monthly Cost* |
+| Pattern | Lambda Invocations | Relative Cost |
 |---------|-------------------|---------------|
 | Direct S3 | Impossible (1 destination only) | - |
-| **SNS Fan-Out** | ~6,000 (batched) | **$1.20** |
-| EventBridge | ~30,000 (1-by-1) | $6.00 |
+| **SNS Fan-Out** | ~N (batched) | **Lowest** |
+| EventBridge | ~5N (1-by-1 per file) | ~5x higher Lambda cost |
 
-*Assuming 128MB, 1s duration
+**SNS maintains event batching, resulting in significantly fewer Lambda invocations than EventBridge.**
 
-**SNS is 5x cheaper than EventBridge!**
+### SNS Pricing Summary
+
+- **API Requests**: First 1 million free, then $0.50 per million
+- **Lambda Delivery**: Free (no per-notification charge)
+- **Data Transfer**: $0.09/GB (negligible for small S3 notifications)
+
+> For current pricing, see [AWS Lambda Pricing](https://aws.amazon.com/lambda/pricing/) and [AWS SNS Pricing](https://aws.amazon.com/sns/pricing/).
 
 ## Example
 
-See complete working example in: [`examples/sns_fanout_configuration/`](examples/sns_fanout_configuration/)
+See complete working example in: [`examples/sns_fanout_configuration/`](../examples/sns_fanout_configuration/)
 
 ## Testing
 
@@ -255,8 +232,9 @@ All tests pass - no code changes required!
 
 **Use SNS fan-out when you need multiple consumers for CloudTrail events:**
 
-- Set `use_sns_topic_notifications = true`
-- Set `create_sns_topic_notifications = true` (or provide external topic)
-- Always use `raw_message_delivery = true` on subscriptions
+- Set `enable_s3_sns_fanout = true`
+- Set `create_s3_sns_fanout_topic = true` (or provide external topic ARN)
+- For Lambda subscribers: code must unwrap SNS envelope (CloudTrail-to-Slack does this automatically)
+- For SQS/HTTP subscribers: optionally use `raw_message_delivery = true`
 - Add unlimited subscribers to the SNS topic
 - Enjoy event batching and low costs!
