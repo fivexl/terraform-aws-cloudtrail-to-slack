@@ -1,7 +1,7 @@
 import json
 from unittest.mock import patch
 
-# ruff: noqa: ANN201, ANN001, E501
+# ruff: noqa: ANN201, ANN001, E501, PLR2004
 
 
 def test_sns_wrapped_s3_notification():

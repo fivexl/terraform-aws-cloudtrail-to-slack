@@ -42,7 +42,7 @@ sns_client = boto3.client("sns")
 cloudwatch_client = boto3.client("cloudwatch")
 
 
-def lambda_handler(incoming_event: Dict[str, Any], _) -> int:  # noqa: ANN001
+def lambda_handler(incoming_event: Dict[str, Any], _) -> int:  # noqa: ANN001, PLR0912 (branches from SNS/S3 handling)
     """
     Lambda handler supporting S3 notifications from:
     1. Direct S3 notifications (S3 -> Lambda)
