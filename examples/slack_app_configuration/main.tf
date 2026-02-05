@@ -80,11 +80,11 @@ locals {
 
   # This rule is already in the default rules, but we want to show how to add your own rules.
   # Important! User defined rules should not contain commas since they are passed to the lambda as a comma separated string
-  cloudtrail_rules = [
+  rules = [
     # Notify about all non-read actions done by root
     "event['userIdentity.type'] == 'Root' and not event['eventName'].startswith(('Get')) and not event['eventName'].startswith(('List')) and not event['eventName'].startswith(('Describe')) and not event['eventName'].startswith(('Head'))",
   ]
-  cloudtrail_ignore_rules = [
+  ignore_rules = [
     # Ignore all non-read actions done by root
     "event['userIdentity.type'] == 'Root' and not event['eventName'].startswith(('Get')) and not event['eventName'].startswith(('List')) and not event['eventName'].startswith(('Describe')) and not event['eventName'].startswith(('Head'))",
   ]

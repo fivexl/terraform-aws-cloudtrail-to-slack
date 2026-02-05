@@ -89,11 +89,11 @@ locals {
 
   # This rule is already in the default rules, but we want to demonstrate how to add your own rules.
   # Important! User-defined rules should not contain commas as they are passed to Lambda as a comma-separated string.
-  cloudtrail_rules = [
+  rules = [
     # Notify about all non-read actions done by root
     "event['userIdentity.type'] == 'Root' and not event['eventName'].startswith(('Get')) and not event['eventName'].startswith(('List')) and not event['eventName'].startswith(('Describe')) and not event['eventName'].startswith(('Head'))",
   ]
-  cloudtrail_ignore_rules = [
+  ignore_rules = [
     # Ignore all non-read actions done by root
     "event['userIdentity.type'] == 'Root' and not event['eventName'].startswith(('Get')) and not event['eventName'].startswith(('List')) and not event['eventName'].startswith(('Describe')) and not event['eventName'].startswith(('Head'))",
   ]
@@ -114,8 +114,8 @@ module "cloudtrail_to_slack" {
 
   default_slack_hook_url = data.aws_ssm_parameter.default_hook.value
 
-  # Optional, allows sending notifications to different Slack channels for different accounts.
-  slack_app_configuration = [
+  # Optional, allows sending notifications to different Slack webhooks for different accounts.
+  configuration = [
     {
       "accounts" : ["111111111111"],
       "slack_hook_url" : data.aws_ssm_parameter.dev_hook.value

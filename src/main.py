@@ -42,8 +42,47 @@ sns_client = boto3.client("sns")
 cloudwatch_client = boto3.client("cloudwatch")
 
 
-def lambda_handler(s3_notification_event: Dict[str, List[Any]], _) -> int:  # noqa: ANN001
+def lambda_handler(incoming_event: Dict[str, Any], _) -> int:  # noqa: ANN001, PLR0912 (branches from SNS/S3 handling)
+    """
+    Lambda handler supporting S3 notifications from:
+    1. Direct S3 notifications (S3 -> Lambda)
+    2. SNS wrapped notifications (S3 -> SNS -> Lambda)
+
+    Note: SNS does NOT support raw_message_delivery for Lambda endpoints.
+    Lambda always receives SNS envelope which must be unwrapped.
+    """
+    records = incoming_event.get("Records", [])
+
+    if not records:
+        logger.warning({"Received event with no Records": incoming_event})
+        return 200
+
+    # Use incoming_event as fallback for error reporting if SNS unwrapping fails
+    s3_notification_event = incoming_event
+
     try:
+        if records[0].get("EventSource") == "aws:sns":
+            # SNS format: S3 -> SNS -> Lambda
+            # Extract S3 notification from SNS message
+            s3_records = []
+            for sns_record in records:
+                message = sns_record.get("Sns", {}).get("Message", "")
+                try:
+                    s3_notification = json.loads(message)
+                    # The message contains S3 notification with Records array
+                    inner_records = s3_notification.get("Records")
+                    if inner_records is None:
+                        logger.warning({"SNS message does not contain Records": {"message_keys": list(s3_notification.keys())}})
+                    else:
+                        s3_records.extend(inner_records)
+                except json.JSONDecodeError as e:
+                    logger.error({"Failed to parse SNS message": {"error": str(e), "message": message}})
+                    continue
+            # Create proper S3 notification format for downstream processing
+            if not s3_records:
+                logger.warning({"SNS messages yielded no S3 records"})
+            s3_notification_event = {"Records": s3_records}
+
         for record in s3_notification_event["Records"]:
             event_name: str = record["eventName"]
             if "Digest" in record["s3"]["object"]["key"]:
