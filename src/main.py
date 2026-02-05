@@ -64,7 +64,6 @@ def lambda_handler(incoming_event: Dict[str, Any], _) -> int:  # noqa: ANN001, P
         if records[0].get("EventSource") == "aws:sns":
             # SNS format: S3 -> SNS -> Lambda
             # Extract S3 notification from SNS message
-            sns_record_count = len(records)
             s3_records = []
             for sns_record in records:
                 message = sns_record.get("Sns", {}).get("Message", "")
