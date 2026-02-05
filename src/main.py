@@ -64,23 +64,24 @@ def lambda_handler(incoming_event: Dict[str, Any], _) -> int:  # noqa: ANN001, P
         if records[0].get("EventSource") == "aws:sns":
             # SNS format: S3 -> SNS -> Lambda
             # Extract S3 notification from SNS message
+            sns_record_count = len(records)
             s3_records = []
             for sns_record in records:
                 message = sns_record.get("Sns", {}).get("Message", "")
                 try:
                     s3_notification = json.loads(message)
                     # The message contains S3 notification with Records array
-                    records = s3_notification.get("Records")
-                    if records is None:
+                    inner_records = s3_notification.get("Records")
+                    if inner_records is None:
                         logger.warning({"SNS message does not contain Records": {"message_keys": list(s3_notification.keys())}})
                     else:
-                        s3_records.extend(records)
+                        s3_records.extend(inner_records)
                 except json.JSONDecodeError as e:
                     logger.error({"Failed to parse SNS message": {"error": str(e), "message": message}})
                     continue
             # Create proper S3 notification format for downstream processing
             if not s3_records:
-                logger.warning({"SNS messages yielded no S3 records": {"sns_record_count": len(records)}})
+                logger.warning({"SNS messages yielded no S3 records"})
             s3_notification_event = {"Records": s3_records}
 
         for record in s3_notification_event["Records"]:
