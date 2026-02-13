@@ -19,10 +19,9 @@ class SlackAppConfig:
     default_channel_id: str
     configuration: List[Dict]
 
+
 def get_slack_config() -> Union[SlackWebhookConfig, SlackAppConfig]:
-
     if bot_token := os.environ.get("SLACK_BOT_TOKEN"):
-
         default_channel_id: str | None = os.environ.get("DEFAULT_SLACK_CHANNEL_ID")
         if not default_channel_id:
             raise Exception("Environment variable DEFAULT_SLACK_CHANNEL_ID must be set.")
@@ -31,19 +30,18 @@ def get_slack_config() -> Union[SlackWebhookConfig, SlackAppConfig]:
         configuration: List[Dict] = json.loads(raw_configuration) if raw_configuration else []
 
         return SlackAppConfig(
-            bot_token = bot_token,
-            default_channel_id = default_channel_id,
-            configuration = configuration,
+            bot_token=bot_token,
+            default_channel_id=default_channel_id,
+            configuration=configuration,
         )
 
     elif hook_url := os.environ.get("HOOK_URL"):
-
         raw_configuration: str | None = os.environ.get("CONFIGURATION")
-        configuration: List[Dict]  = json.loads(raw_configuration) if raw_configuration else []
+        configuration: List[Dict] = json.loads(raw_configuration) if raw_configuration else []
 
         return SlackWebhookConfig(
-            default_hook_url = hook_url,
-            configuration = configuration,
+            default_hook_url=hook_url,
+            configuration=configuration,
         )
 
     else:
@@ -51,16 +49,15 @@ def get_slack_config() -> Union[SlackWebhookConfig, SlackAppConfig]:
 
 
 class Config:
-    def __init__(self): # noqa: ANN101 ANN204
-
+    def __init__(self):  # noqa: ANN101 ANN204
         self.default_sns_topic_arn: str | None = os.environ.get("DEFAULT_SNS_TOPIC_ARN")
         raw_sns_configuration: str = os.environ.get("SNS_CONFIGURATION", "")
-        self.sns_configuration: List[Dict] = json.loads(raw_sns_configuration) if raw_sns_configuration else[]
+        self.sns_configuration: List[Dict] = json.loads(raw_sns_configuration) if raw_sns_configuration else []
 
-        self.rule_evaluation_errors_to_slack: bool = os.environ.get("RULE_EVALUATION_ERRORS_TO_SLACK") # type: ignore # noqa: PGH003, E501
+        self.rule_evaluation_errors_to_slack: bool = self.get_bool_from_env_var("RULE_EVALUATION_ERRORS_TO_SLACK")
         self.rules_separator: str = os.environ.get("RULES_SEPARATOR", ",")
-        self.user_rules: List[str] = self.parse_rules_from_string(os.environ.get("RULES"), self.rules_separator) # noqa: E501
-        self.ignore_rules: List[str] = self.parse_rules_from_string(os.environ.get("IGNORE_RULES"), self.rules_separator) # noqa: E501
+        self.user_rules: List[str] = self.parse_rules_from_string(os.environ.get("RULES"), self.rules_separator)  # noqa: E501
+        self.ignore_rules: List[str] = self.parse_rules_from_string(os.environ.get("IGNORE_RULES"), self.rules_separator)  # noqa: E501
         self.use_default_rules: bool = self.get_bool_from_env_var("USE_DEFAULT_RULES")
         self.events_to_track: str | None = os.environ.get("EVENTS_TO_TRACK")
 
@@ -92,9 +89,8 @@ class Config:
         return os.environ.get(env_var_name, "").lower() in ["true", "1"]
 
 
-
 class JsonFormatter(logging.Formatter):
-    def format(self, record): # noqa: ANN001, ANN201, ANN101
+    def format(self, record):  # noqa: ANN001, ANN201, ANN101
         log_entry = {
             "level": record.levelname,
             "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"),
@@ -109,13 +105,14 @@ class JsonFormatter(logging.Formatter):
 
         return json.dumps(log_entry)
 
-def get_logger(name: str ="main") -> logging.Logger:
+
+def get_logger(name: str = "main") -> logging.Logger:
     log_level = os.environ.get("LOG_LEVEL", "INFO")
     log_level = logging.getLevelName(log_level)
 
     root_logger = logging.getLogger()
     if root_logger.handlers:
-        root_logger.handlers = [] # Remove the default lambda logger
+        root_logger.handlers = []  # Remove the default lambda logger
     root_logger.setLevel(log_level)
 
     logger = logging.getLogger(name)

@@ -7,6 +7,7 @@ from dateutil.parser import parse as parse_date
 
 logger = get_logger()
 
+
 def event_to_sns_message(event: dict, source_file: str, account_id_from_event: str | None) -> dict[str, Any]:
     event_name = event["eventName"]
     error_code = event.get("errorCode")
@@ -46,22 +47,19 @@ def send_message_to_sns(
     source_file: str,
     account_id: str | None,
     cfg: config.Config,
-    sns_client # noqa: ANN001
-)-> None:
+    sns_client,  # noqa: ANN001
+) -> None:
     if default_topic_arn := cfg.default_sns_topic_arn:
         logger.info("Sending message to SNS.")
         message = json.dumps(event_to_sns_message(event, source_file, account_id))
 
         logger.debug(f"SNS Message: {message}")
         if account_id:
-            topic_arn = next(
-                (item["sns_topic_arn"] for item in cfg.sns_configuration if account_id in item["accounts"]),
-                default_topic_arn
-            )
+            topic_arn = next((item["sns_topic_arn"] for item in cfg.sns_configuration if account_id in item["accounts"]), default_topic_arn)
         else:
             topic_arn = default_topic_arn
         logger.debug(f"Topic ARN: {topic_arn}")
         return sns_client.publish(
-            TopicArn = topic_arn,
-            Message = message,
+            TopicArn=topic_arn,
+            Message=message,
         )
