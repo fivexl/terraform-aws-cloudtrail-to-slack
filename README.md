@@ -1,4 +1,4 @@
-[![FivexL](https://releases.fivexl.io/fivexlbannergit_new.png)](https://fivexl.io/#email-subscription)
+[![FivexL](https://releases.fivexl.io/like-this-repo-banner.png)](https://fivexl.io/#email-subscription)
 
 ### Want practical AWS infrastructure insights?
 
