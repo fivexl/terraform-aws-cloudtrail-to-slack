@@ -65,7 +65,7 @@ class Config:
         self.events_to_track: str | None = os.environ.get("EVENTS_TO_TRACK")
 
         self.dynamodb_table_name: str | None = os.environ.get("DYNAMODB_TABLE_NAME")
-        self.dynamodb_time_to_live: int = int(os.environ.get("DYNAMODB_TIME_TO_LIVE", 900))
+        self.dynamodb_time_to_live: int = int(os.environ.get("DYNAMODB_TIME_TO_LIVE", "900"))
         self.push_access_denied_cloudwatch_metrics: bool = self.get_bool_from_env_var("PUSH_ACCESS_DENIED_CLOUDWATCH_METRICS")
 
         self.rules = []
