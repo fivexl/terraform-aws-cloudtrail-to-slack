@@ -6,13 +6,13 @@ authors = ["FivexL"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.14"
 slack-sdk = "^3.21.3"
 
 # Full list of dependencies, for development.
 # Can be installed with `poetry install --with dev`.
 [tool.poetry.group.dev.dependencies]
-python = "^3.10"
+python = "^3.14"
 pytest = "^7.2.2"
 black = "^24.3.0"
 boto3 = "^1.26.97"
@@ -98,8 +98,8 @@ line-length = 140
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
-# Assume Python 3.10.
-target-version = "py310"
+# Assume Python 3.14.
+target-version = "py314"
 
 [tool.ruff.mccabe]
 # Unlike Flake8, default to a complexity level of 10.

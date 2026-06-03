@@ -1,11 +1,11 @@
 module "lambda" {
   source  = "terraform-aws-modules/lambda/aws"
-  version = "4.18.0"
+  version = "8.8.0"
 
   function_name = var.function_name
   description   = "Send CloudTrail Events to Slack"
   handler       = "main.lambda_handler"
-  runtime       = "python3.10"
+  runtime       = "python3.14"
   timeout       = var.lambda_timeout_seconds
   publish       = true
 
@@ -25,7 +25,7 @@ module "lambda" {
     }
   ]
 
-  docker_image             = "lambda/python:3.10"
+  docker_image             = "lambda/python:3.14"
   docker_file              = "${path.module}/src/docker/Dockerfile"
   recreate_missing_package = var.lambda_recreate_missing_package
   build_in_docker          = var.lambda_build_in_docker
