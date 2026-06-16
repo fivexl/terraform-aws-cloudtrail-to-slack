@@ -122,7 +122,7 @@ def test_should_message_be_processed_with_ParsingEventError_handling(
     )
     result = should_message_be_processed(
         event=message_should_be_processed_with_incorrect_rule_test_case["in"]["event"],
-        rules=almost_default_rules,  # type: ignore # noqa:
+        rules=almost_default_rules,  # type: ignore[arg-type]  # noqa: PGH003
         ignore_rules=[],
     )
 
