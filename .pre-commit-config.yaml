@@ -20,7 +20,7 @@ repos:
         language: python
         require_serial: true
         types_or: [python, pyi]
-        additional_dependencies: [black==23.1.0]
+        additional_dependencies: [black==26.5.1]
 -   repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: v0.0.259
     hooks:
