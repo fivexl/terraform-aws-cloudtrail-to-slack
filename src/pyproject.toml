@@ -18,6 +18,13 @@ black = "^26.5.1"
 boto3 = "^1.26.97"
 ruff = "^0.15.0"
 slack-sdk = "^3.21.3"
+# Transitive dependencies pinned to their patched versions so the exported
+# lockfiles do not ship known-vulnerable versions:
+#   click   - CVE-2026-7246 (command injection in click.edit), fixed in 8.3.3
+#   urllib3 - CVE-2025-66418, CVE-2025-66471, CVE-2026-21441 (decompression
+#             bombs / unbounded decompression chains), all fixed by 2.6.3
+click = ">=8.3.3"
+urllib3 = ">=2.6.3"
 
 [build-system]
 requires = ["poetry-core"]

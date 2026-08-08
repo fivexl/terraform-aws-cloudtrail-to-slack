@@ -24,6 +24,7 @@ from slack_sdk.web.slack_response import SlackResponse
 
 from config import Config, SlackAppConfig, SlackWebhookConfig, get_logger, get_slack_config
 from dynamodb import get_thread_ts_from_dynamodb, put_event_to_dynamodb
+from rule_evaluator import evaluate_rule
 from slack_helpers import (
     event_to_slack_message,
     message_for_rule_evaluation_error_notification,
@@ -183,7 +184,7 @@ def should_message_be_processed(
     errors = []
     for ignore_rule in ignore_rules:
         try:
-            if eval(ignore_rule, {}, {"event": flat_event}) is True:  # noqa: PGH001
+            if evaluate_rule(ignore_rule, flat_event) is True:
                 logger.info(
                     {"Event matched ignore rule and will not be processed": {"ignore_rule": ignore_rule, "flat_event": flat_event}}
                 )  # noqa: E501
@@ -194,7 +195,7 @@ def should_message_be_processed(
 
     for rule in rules:
         try:
-            if eval(rule, {}, {"event": flat_event}) is True:  # noqa: PGH001
+            if evaluate_rule(rule, flat_event) is True:
                 logger.info({"Event matched rule and will be processed": {"rule": rule, "flat_event": flat_event}})  # noqa: E501
                 return ProcessingResult(True, errors)
         except Exception as e:

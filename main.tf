@@ -21,6 +21,14 @@ module "lambda" {
         "!tests/.*",
         "!tools/.*",
         "!.pytest_cache/.*",
+        "!\\.ruff_cache/.*",
+        # Development dependency manifests must not ship inside the artifact.
+        # Only deploy_requirements.txt is installed at build time, but a
+        # scanner (e.g. Amazon Inspector) that finds these files in the zip
+        # reports the whole dev tool chain as Lambda runtime dependencies.
+        "!pyproject\\.toml",
+        "!poetry\\.lock",
+        "!requirements\\.txt",
       ]
     }
   ]

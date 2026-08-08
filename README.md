@@ -123,6 +123,43 @@ For detailed documentation and examples, see:
 
 Rules are python strings that are evaluated in the runtime and should return the bool value, if rule returns True, then notification will be sent to Slack.
 
+Rules are **not** executed with Python's `eval()`. They are parsed and evaluated
+by a restricted expression evaluator ([`src/rule_evaluator.py`](src/rule_evaluator.py))
+that only permits the boolean-expression subset of Python listed below, so a rule
+can never import a module, read an attribute, or run arbitrary code (CWE-94).
+
+Supported in a rule:
+
+| Feature | Example |
+| --- | --- |
+| Key lookup | `event["eventName"]` |
+| `dict` helpers | `event.get("errorCode", "")`, `len(event.keys())`, `"x" in event` |
+| String helpers | `.startswith(...)`, `.endswith(...)`, `.lower()`, `.split(...)`, `.replace(...)`, `.strip()` |
+| Comparisons | `==`, `!=`, `<`, `<=`, `>`, `>=`, `is`, `is not` |
+| Membership | `in`, `not in` |
+| Boolean logic | `and`, `or`, `not`, parentheses, ternary `a if c else b` |
+| Literals | strings, numbers, `True` / `False` / `None`, tuples, lists, sets, dicts |
+| Arithmetic | `+`, `-`, `/`, `//`, `%` |
+| Slicing | `event["userIdentity.arn"][:12]` |
+| Builtins | `abs`, `all`, `any`, `bool`, `float`, `int`, `len`, `max`, `min`, `round`, `sorted`, `str`, `sum` |
+
+Not supported, and rejected with a rule evaluation error:
+
+- attribute access other than the methods above (so `event.__class__` and friends are unreachable)
+- comprehensions, generator expressions, `lambda`, f-strings, `:=`
+- `**` and `*`, the bitwise and shift operators (`& | ^ << >> ~`) — `**` and `*`
+  let a one-line rule exhaust the function's memory, and an out-of-memory kill
+  cannot be reported as a per-rule error the way an exception can
+- any call to a function that is not one of the builtins listed above
+- rules longer than 65536 characters, larger than 2000 expression elements, or
+  nested more than 100 levels deep
+
+If you are upgrading and a rule stops matching, check the rule evaluation errors
+(they are sent to Slack unless `rule_evaluation_errors_to_slack` is `false`) and
+rewrite the rule using the grammar above. Every rule ever shipped or documented
+by this module — subscripts, `.get`, `.startswith` / `.endswith`, `in`, `and`,
+`not` — works unchanged.
+
 This module comes with a set of predefined rules (default rules) that users can take advantage of:
 
 ## Default rules:
