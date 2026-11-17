@@ -163,6 +163,12 @@ variable "lambda_build_in_docker" {
   description = "Whether to build dependencies in Docker"
 }
 
+variable "lambda_trigger_on_package_timestamp" {
+  type        = bool
+  default     = true
+  description = "Whether to rebuild the Lambda package on every plan. When true (the upstream default), the package build trigger includes a timestamp, so every plan in a fresh working directory, such as each CI run, shows the function as changed even when the source is not. Set to false to rebuild only when the package filename, derived from the source content, changes."
+}
+
 variable "tags" {
   description = "Tags to attach to resources"
   default     = {}

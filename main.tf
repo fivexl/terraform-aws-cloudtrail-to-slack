@@ -38,6 +38,8 @@ module "lambda" {
   recreate_missing_package = var.lambda_recreate_missing_package
   build_in_docker          = var.lambda_build_in_docker
 
+  trigger_on_package_timestamp = var.lambda_trigger_on_package_timestamp
+
   environment_variables = merge(
     {
       FUNCTION_NAME = var.function_name
