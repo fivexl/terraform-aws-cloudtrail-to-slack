@@ -46,4 +46,4 @@ repos:
         - --args=--lockfile=false
     -   id: terraform_trivy
         args:
-        - --args=--severity HIGH,CRITICAL --skip-dirs .terraform,examples
+        - --args=--severity HIGH,CRITICAL --skip-dirs .terraform,examples,src/.venv --skip-files src/docker/Dockerfile

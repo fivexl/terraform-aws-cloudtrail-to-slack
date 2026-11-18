@@ -30,6 +30,19 @@ resource "aws_cloudtrail" "main" {
   }
 }
 
+module "logging_bucket" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "3.7.0"
+
+  # Bucket that receives the S3 access logs of the CloudTrail bucket
+  bucket = ""
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 module "cloudtrail_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "3.7.0"

@@ -411,11 +411,11 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 
 # Terraform specs
 
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 0.13.1 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 4.8 |
 | <a name="requirement_external"></a> [external](#requirement\_external) | >= 1.0 |
@@ -425,24 +425,28 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 ## Providers
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="provider_aws"></a> [aws](#provider\_aws) | >= 4.8 |
 
 ## Modules
 
 | Name | Source | Version |
-|------|--------|---------|
+| ---- | ------ | ------- |
 | <a name="module_cloudtrail_to_slack_dynamodb_table"></a> [cloudtrail\_to\_slack\_dynamodb\_table](#module\_cloudtrail\_to\_slack\_dynamodb\_table) | terraform-aws-modules/dynamodb-table/aws | 3.3.0 |
-| <a name="module_lambda"></a> [lambda](#module\_lambda) | terraform-aws-modules/lambda/aws | 4.18.0 |
+| <a name="module_lambda"></a> [lambda](#module\_lambda) | terraform-aws-modules/lambda/aws | 8.8.0 |
 
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
 | [aws_lambda_permission.s3](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
+| [aws_lambda_permission.sns](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
 | [aws_s3_bucket_notification.bucket_notification](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_notification) | resource |
 | [aws_sns_topic.events_to_sns](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic) | resource |
+| [aws_sns_topic.s3_notifications](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic) | resource |
+| [aws_sns_topic_policy.s3_notifications](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_policy) | resource |
 | [aws_sns_topic_subscription.events_to_sns](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_subscription) | resource |
+| [aws_sns_topic_subscription.lambda](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_subscription) | resource |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
 | [aws_iam_policy_document.s3](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_kms_key.cloudtrail](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/kms_key) | data source |
@@ -453,31 +457,33 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_aws_sns_topic_subscriptions"></a> [aws\_sns\_topic\_subscriptions](#input\_aws\_sns\_topic\_subscriptions) | Map of endpoints to protocols for SNS topic subscriptions. If not set, sns notifications will not be sent. | `map(string)` | `{}` | no |
 | <a name="input_cloudtrail_logs_kms_key_id"></a> [cloudtrail\_logs\_kms\_key\_id](#input\_cloudtrail\_logs\_kms\_key\_id) | Alias, key id or key arn of the KMS Key that used for CloudTrail events | `string` | `""` | no |
 | <a name="input_cloudtrail_logs_s3_bucket_name"></a> [cloudtrail\_logs\_s3\_bucket\_name](#input\_cloudtrail\_logs\_s3\_bucket\_name) | Name of the CloudWatch log s3 bucket that contains CloudTrail events | `string` | n/a | yes |
-| <a name="input_configuration"></a> [configuration](#input\_configuration) | Allows the configuration of the Slack webhook URL per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization. | <pre>list(object({<br>    accounts       = list(string)<br>    slack_hook_url = string<br>  }))</pre> | `null` | no |
+| <a name="input_configuration"></a> [configuration](#input\_configuration) | Allows the configuration of the Slack webhook URL per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization. | <pre>list(object({<br/>    accounts       = list(string)<br/>    slack_hook_url = string<br/>  }))</pre> | `null` | no |
 | <a name="input_create_bucket_notification"></a> [create\_bucket\_notification](#input\_create\_bucket\_notification) | Whether to create S3 bucket notification for CloudTrail logs | `bool` | `true` | no |
+| <a name="input_create_s3_sns_fanout_topic"></a> [create\_s3\_sns\_fanout\_topic](#input\_create\_s3\_sns\_fanout\_topic) | Whether to create SNS topic for S3 fan-out. Only used when enable\_s3\_sns\_fanout=true. If false, you must provide s3\_sns\_fanout\_topic\_arn. | `bool` | `true` | no |
 | <a name="input_dead_letter_target_arn"></a> [dead\_letter\_target\_arn](#input\_dead\_letter\_target\_arn) | The ARN of an SNS topic or SQS queue to notify when an invocation fails. | `string` | `null` | no |
 | <a name="input_default_slack_channel_id"></a> [default\_slack\_channel\_id](#input\_default\_slack\_channel\_id) | The Slack channel ID to be used if the AWS account ID does not match any account ID in the configuration variable. | `string` | `null` | no |
 | <a name="input_default_slack_hook_url"></a> [default\_slack\_hook\_url](#input\_default\_slack\_hook\_url) | The Slack incoming webhook URL to be used if the AWS account ID does not match any account ID in the configuration variable. | `string` | `null` | no |
 | <a name="input_default_sns_topic_arn"></a> [default\_sns\_topic\_arn](#input\_default\_sns\_topic\_arn) | Default topic for all notifications. If not set, sns notifications will not be sent. | `string` | `null` | no |
 | <a name="input_dynamodb_table_name"></a> [dynamodb\_table\_name](#input\_dynamodb\_table\_name) | Name of the dynamodb table, it would not be created if slack\_bot\_token is not set. | `string` | `"fivexl-cloudtrail-to-slack-table"` | no |
 | <a name="input_dynamodb_time_to_live"></a> [dynamodb\_time\_to\_live](#input\_dynamodb\_time\_to\_live) | How long to keep cloudtrail events in dynamodb table, for collecting similar events in thread of one message | `number` | `900` | no |
-| <a name="input_ecr_owner_account_id"></a> [ecr\_owner\_account\_id](#input\_ecr\_owner\_account\_id) | AWS account ID that owns the ECR repository with the pre-built image. Only used when use_pre_created_image is true. | `string` | `"222341826240"` | no |
-| <a name="input_ecr_repo_name"></a> [ecr\_repo\_name](#input\_ecr\_repo\_name) | Name of the ECR repository with the pre-built image. Only used when use_pre_created_image is true. | `string` | `"fivexl-opensource/terraform-aws-cloudtrail-to-slack"` | no |
-| <a name="input_ecr_repo_tag"></a> [ecr\_repo\_tag](#input\_ecr\_repo\_tag) | Tag of the pre-built image to deploy. The default matches the module release, so upgrading the module upgrades the image. Only used when use_pre_created_image is true. | `string` | `"5.0.0"` | no |
+| <a name="input_ecr_owner_account_id"></a> [ecr\_owner\_account\_id](#input\_ecr\_owner\_account\_id) | AWS account ID that owns the ECR repository with the pre-built image. Only used when use\_pre\_created\_image is true. | `string` | `"222341826240"` | no |
+| <a name="input_ecr_repo_name"></a> [ecr\_repo\_name](#input\_ecr\_repo\_name) | Name of the ECR repository with the pre-built image. Only used when use\_pre\_created\_image is true. | `string` | `"fivexl-opensource/terraform-aws-cloudtrail-to-slack"` | no |
+| <a name="input_ecr_repo_tag"></a> [ecr\_repo\_tag](#input\_ecr\_repo\_tag) | Tag of the pre-built image to deploy. The default matches the module release, so upgrading the module upgrades the image. Only used when use\_pre\_created\_image is true. | `string` | `"5.0.0"` | no |
 | <a name="input_enable_eventbridge_notificaitons"></a> [enable\_eventbridge\_notificaitons](#input\_enable\_eventbridge\_notificaitons) | Whether to enable EventBridge notifications for S3 bucket | `bool` | `false` | no |
+| <a name="input_enable_s3_sns_fanout"></a> [enable\_s3\_sns\_fanout](#input\_enable\_s3\_sns\_fanout) | Enable SNS fan-out pattern for S3 notifications (allows multiple Lambda consumers). When true, S3 sends events to SNS which fans out to subscribers. Note: Lambda endpoints do NOT support raw\_message\_delivery, so SNS messages are automatically unwrapped by the Lambda code. | `bool` | `false` | no |
 | <a name="input_events_to_track"></a> [events\_to\_track](#input\_events\_to\_track) | Comma-separated list events to track and report | `string` | `""` | no |
 | <a name="input_function_name"></a> [function\_name](#input\_function\_name) | Lambda function name | `string` | `"fivexl-cloudtrail-to-slack"` | no |
 | <a name="input_ignore_rules"></a> [ignore\_rules](#input\_ignore\_rules) | Comma-separated list of rules to ignore events if you need to suppress something. Will be applied before rules and default\_rules | `string` | `""` | no |
-| <a name="input_lambda_build_in_docker"></a> [lambda\_build\_in\_docker](#input\_lambda\_build\_in\_docker) | Whether to build dependencies in Docker. Only used when use_pre_created_image is false. | `bool` | `false` | no |
+| <a name="input_lambda_build_in_docker"></a> [lambda\_build\_in\_docker](#input\_lambda\_build\_in\_docker) | Whether to build dependencies in Docker. Only used when use\_pre\_created\_image is false. | `bool` | `false` | no |
 | <a name="input_lambda_logs_retention_in_days"></a> [lambda\_logs\_retention\_in\_days](#input\_lambda\_logs\_retention\_in\_days) | Controls for how long to keep lambda logs. | `number` | `30` | no |
 | <a name="input_lambda_memory_size"></a> [lambda\_memory\_size](#input\_lambda\_memory\_size) | Amount of memory in MB your Lambda Function can use at runtime. Valid value between 128 MB to 10,240 MB (10 GB), in 64 MB increments. | `number` | `256` | no |
-| <a name="input_lambda_recreate_missing_package"></a> [lambda\_recreate\_missing\_package](#input\_lambda\_recreate\_missing\_package) | Whether to recreate missing Lambda package if it is missing locally or not. Only used when use_pre_created_image is false. | `bool` | `true` | no |
+| <a name="input_lambda_recreate_missing_package"></a> [lambda\_recreate\_missing\_package](#input\_lambda\_recreate\_missing\_package) | Whether to recreate missing Lambda package if it is missing locally or not. Only used when use\_pre\_created\_image is false. | `bool` | `true` | no |
 | <a name="input_lambda_timeout_seconds"></a> [lambda\_timeout\_seconds](#input\_lambda\_timeout\_seconds) | Controls lambda timeout setting. | `number` | `30` | no |
-| <a name="input_lambda_trigger_on_package_timestamp"></a> [lambda\_trigger\_on\_package\_timestamp](#input\_lambda\_trigger\_on\_package\_timestamp) | Whether to rebuild the Lambda package on every plan. When true (the upstream default), the package build trigger includes a timestamp, so every plan in a fresh working directory, such as each CI run, shows the function as changed even when the source is not. Set to false to rebuild only when the package filename, derived from the source content, changes. Only used when use_pre_created_image is false. | `bool` | `true` | no |
+| <a name="input_lambda_trigger_on_package_timestamp"></a> [lambda\_trigger\_on\_package\_timestamp](#input\_lambda\_trigger\_on\_package\_timestamp) | Whether to rebuild the Lambda package on every plan. When true (the upstream default), the package build trigger includes a timestamp, so every plan in a fresh working directory, such as each CI run, shows the function as changed even when the source is not. Set to false to rebuild only when the package filename, derived from the source content, changes. Only used when use\_pre\_created\_image is false. | `bool` | `true` | no |
 | <a name="input_log_level"></a> [log\_level](#input\_log\_level) | Log level for lambda function | `string` | `"INFO"` | no |
 | <a name="input_push_access_denied_cloudwatch_metrics"></a> [push\_access\_denied\_cloudwatch\_metrics](#input\_push\_access\_denied\_cloudwatch\_metrics) | If true, CloudWatch metrics will be pushed for all access denied events, including events ignored by rules. | `bool` | `true` | no |
 | <a name="input_rule_evaluation_errors_to_slack"></a> [rule\_evaluation\_errors\_to\_slack](#input\_rule\_evaluation\_errors\_to\_slack) | If rule evaluation error occurs, send notification to slack | `bool` | `true` | no |
@@ -485,19 +491,23 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 | <a name="input_rules_separator"></a> [rules\_separator](#input\_rules\_separator) | Custom rules separator. Can be used if there are commas in the rules | `string` | `","` | no |
 | <a name="input_s3_notification_filter_prefix"></a> [s3\_notification\_filter\_prefix](#input\_s3\_notification\_filter\_prefix) | S3 notification filter prefix | `string` | `"AWSLogs/"` | no |
 | <a name="input_s3_removed_object_notification"></a> [s3\_removed\_object\_notification](#input\_s3\_removed\_object\_notification) | If object was removed from cloudtrail bucket, send notification to slack | `bool` | `true` | no |
-| <a name="input_slack_app_configuration"></a> [slack\_app\_configuration](#input\_slack\_app\_configuration) | Allows the configuration of the Slack app per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization. | <pre>list(object({<br>    accounts         = list(string)<br>    slack_channel_id = string<br>  }))</pre> | `null` | no |
+| <a name="input_s3_sns_fanout_topic_arn"></a> [s3\_sns\_fanout\_topic\_arn](#input\_s3\_sns\_fanout\_topic\_arn) | ARN of existing SNS topic to use for S3 fan-out. Only used when enable\_s3\_sns\_fanout=true and create\_s3\_sns\_fanout\_topic=false. | `string` | `null` | no |
+| <a name="input_s3_sns_fanout_topic_name"></a> [s3\_sns\_fanout\_topic\_name](#input\_s3\_sns\_fanout\_topic\_name) | Name of SNS topic to create for S3 fan-out. Only used when create\_s3\_sns\_fanout\_topic=true. | `string` | `"cloudtrail-s3-notifications"` | no |
+| <a name="input_slack_app_configuration"></a> [slack\_app\_configuration](#input\_slack\_app\_configuration) | Allows the configuration of the Slack app per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization. | <pre>list(object({<br/>    accounts         = list(string)<br/>    slack_channel_id = string<br/>  }))</pre> | `null` | no |
 | <a name="input_slack_bot_token"></a> [slack\_bot\_token](#input\_slack\_bot\_token) | The Slack bot token used for sending messages to Slack. | `string` | `null` | no |
-| <a name="input_sns_configuration"></a> [sns\_configuration](#input\_sns\_configuration) | Allows the configuration of the SNS topic per account(s). | <pre>list(object({<br>    accounts      = list(string)<br>    sns_topic_arn = string<br>  }))</pre> | `null` | no |
+| <a name="input_sns_configuration"></a> [sns\_configuration](#input\_sns\_configuration) | Allows the configuration of the SNS topic per account(s). | <pre>list(object({<br/>    accounts      = list(string)<br/>    sns_topic_arn = string<br/>  }))</pre> | `null` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags to attach to resources | `map(string)` | `{}` | no |
 | <a name="input_use_default_rules"></a> [use\_default\_rules](#input\_use\_default\_rules) | Should default rules be used | `bool` | `true` | no |
-| <a name="input_use_pre_created_image"></a> [use\_pre\_created\_image](#input\_use\_pre\_created\_image) | Use the pre-built Lambda container image published by FivexL (default). Set to false to build a zip package locally with Terraform instead (see lambda_build_in_docker). | `bool` | `true` | no |
+| <a name="input_use_pre_created_image"></a> [use\_pre\_created\_image](#input\_use\_pre\_created\_image) | Use the pre-built Lambda container image published by FivexL (default). Set to false to build a zip package locally with Terraform instead (see lambda\_build\_in\_docker). | `bool` | `true` | no |
 
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | <a name="output_lambda_function_arn"></a> [lambda\_function\_arn](#output\_lambda\_function\_arn) | The ARN of the Lambda Function |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+| <a name="output_s3_sns_fanout_topic_arn"></a> [s3\_sns\_fanout\_topic\_arn](#output\_s3\_sns\_fanout\_topic\_arn) | ARN of the SNS topic for S3 fan-out. Returns the created topic ARN, the provided external topic ARN, or null if fan-out is disabled. |
+| <a name="output_s3_sns_fanout_topic_name"></a> [s3\_sns\_fanout\_topic\_name](#output\_s3\_sns\_fanout\_topic\_name) | Name of the SNS topic for S3 fan-out (only available when module creates the topic). |
+<!-- END_TF_DOCS -->
 
 ## License
 
