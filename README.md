@@ -340,6 +340,53 @@ S3 Buckets only support a single notification configuration resource. Declaring 
 If you need more destinations for notifications in the CloudTrail S3 bucket, please create resource aws_s3_bucket_notification outside of this module. 
 Use `lambda_function_arn` output to get the Lambda destination.
 
+# Lambda deployment: pre-built image or local build
+
+By default the module deploys a **pre-built Lambda container image** that FivexL publishes to a
+private ECR repository and replicates to all regions (`222341826240`, repository
+`fivexl-opensource/terraform-aws-cloudtrail-to-slack`). Terraform no longer builds anything on your machine
+or in your CI, so there is no Docker, `pip` or build step during `terraform plan` / `apply`.
+The image tag defaults to the module release (`ecr_repo_tag`), so upgrading the module upgrades the image.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `use_pre_created_image` | `true` | `true` deploys the pre-built image. `false` builds a zip package locally, as before. |
+| `ecr_repo_tag` | module release | Image tag to deploy. Set it to pin an image or to test a build. |
+| `ecr_repo_name` | `fivexl-opensource/terraform-aws-cloudtrail-to-slack` | ECR repository. Change it if you mirror the image into your own account. |
+| `ecr_owner_account_id` | `222341826240` | Account that owns the ECR repository. |
+| `lambda_build_in_docker` | `false` | Zip build only: build the dependencies in Docker. |
+
+## Upgrading to 5.0.0
+
+5.0.0 is a major release: the Lambda function changes from a zip package to a container image, so
+Terraform **replaces** the function. The function name, IAM role, triggers and settings stay the same, and the
+function is briefly unavailable while it is replaced. Review the plan before you apply it.
+
+To keep the previous behaviour, set `use_pre_created_image = false`. The zip build still honours
+`lambda_build_in_docker`.
+
+If you built the zip in Docker only to get Linux dependencies from a non-Linux machine
+(`lambda_build_in_docker = true`), you can remove that setting after the upgrade: the image needs no local build.
+
+## Build process (maintainers)
+
+* Python dependencies are managed with [uv](https://docs.astral.sh/uv/). `src/pyproject.toml` and `src/uv.lock` are the
+  source of truth; `src/requirements.txt` is the runtime-only export used by the zip build (pre-commit keeps it in sync).
+* `src/docker/Dockerfile.image` builds the Lambda image (Python 3.14, non-root user).
+  `src/docker/Dockerfile` is only the build environment for the zip fallback.
+* The `Build and Push Docker Image` workflow builds and tests the image on every pull request, and pushes it to ECR
+  when a GitHub Release is published (tag `X.Y.Z`) or when it is started by hand from `main` (tag = short commit SHA).
+  Pushes use GitHub OIDC with a role that trusts only `main` and tags. Existing tags are never overwritten.
+* Run the checks locally with `bash test.sh` (needs `uv` and `pre-commit`).
+
+### Release steps
+
+1. Merge the change. The default `ecr_repo_tag` in `vars.tf` must already equal the version you are about to release.
+2. Run the `Build and Push Docker Image` workflow by hand from `main`. It pushes an image tagged with the short SHA.
+3. Test the module in a sandbox with `ecr_repo_tag` set to that SHA.
+4. Publish the GitHub Release (tag `X.Y.Z`). The workflow pushes the image tagged `X.Y.Z`.
+5. Keep the time between the merge and the release short: until the release image exists, the default tag does not exist in ECR.
+
 # Terraform specs
 
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
@@ -396,16 +443,19 @@ Use `lambda_function_arn` output to get the Lambda destination.
 | <a name="input_default_sns_topic_arn"></a> [default\_sns\_topic\_arn](#input\_default\_sns\_topic\_arn) | Default topic for all notifications. If not set, sns notifications will not be sent. | `string` | `null` | no |
 | <a name="input_dynamodb_table_name"></a> [dynamodb\_table\_name](#input\_dynamodb\_table\_name) | Name of the dynamodb table, it would not be created if slack\_bot\_token is not set. | `string` | `"fivexl-cloudtrail-to-slack-table"` | no |
 | <a name="input_dynamodb_time_to_live"></a> [dynamodb\_time\_to\_live](#input\_dynamodb\_time\_to\_live) | How long to keep cloudtrail events in dynamodb table, for collecting similar events in thread of one message | `number` | `900` | no |
+| <a name="input_ecr_owner_account_id"></a> [ecr\_owner\_account\_id](#input\_ecr\_owner\_account\_id) | AWS account ID that owns the ECR repository with the pre-built image. Only used when use_pre_created_image is true. | `string` | `"222341826240"` | no |
+| <a name="input_ecr_repo_name"></a> [ecr\_repo\_name](#input\_ecr\_repo\_name) | Name of the ECR repository with the pre-built image. Only used when use_pre_created_image is true. | `string` | `"fivexl-opensource/terraform-aws-cloudtrail-to-slack"` | no |
+| <a name="input_ecr_repo_tag"></a> [ecr\_repo\_tag](#input\_ecr\_repo\_tag) | Tag of the pre-built image to deploy. The default matches the module release, so upgrading the module upgrades the image. Only used when use_pre_created_image is true. | `string` | `"5.0.0"` | no |
 | <a name="input_enable_eventbridge_notificaitons"></a> [enable\_eventbridge\_notificaitons](#input\_enable\_eventbridge\_notificaitons) | Whether to enable EventBridge notifications for S3 bucket | `bool` | `false` | no |
 | <a name="input_events_to_track"></a> [events\_to\_track](#input\_events\_to\_track) | Comma-separated list events to track and report | `string` | `""` | no |
 | <a name="input_function_name"></a> [function\_name](#input\_function\_name) | Lambda function name | `string` | `"fivexl-cloudtrail-to-slack"` | no |
 | <a name="input_ignore_rules"></a> [ignore\_rules](#input\_ignore\_rules) | Comma-separated list of rules to ignore events if you need to suppress something. Will be applied before rules and default\_rules | `string` | `""` | no |
-| <a name="input_lambda_build_in_docker"></a> [lambda\_build\_in\_docker](#input\_lambda\_build\_in\_docker) | Whether to build dependencies in Docker | `bool` | `false` | no |
+| <a name="input_lambda_build_in_docker"></a> [lambda\_build\_in\_docker](#input\_lambda\_build\_in\_docker) | Whether to build dependencies in Docker. Only used when use_pre_created_image is false. | `bool` | `false` | no |
 | <a name="input_lambda_logs_retention_in_days"></a> [lambda\_logs\_retention\_in\_days](#input\_lambda\_logs\_retention\_in\_days) | Controls for how long to keep lambda logs. | `number` | `30` | no |
 | <a name="input_lambda_memory_size"></a> [lambda\_memory\_size](#input\_lambda\_memory\_size) | Amount of memory in MB your Lambda Function can use at runtime. Valid value between 128 MB to 10,240 MB (10 GB), in 64 MB increments. | `number` | `256` | no |
-| <a name="input_lambda_recreate_missing_package"></a> [lambda\_recreate\_missing\_package](#input\_lambda\_recreate\_missing\_package) | Description: Whether to recreate missing Lambda package if it is missing locally or not | `bool` | `true` | no |
+| <a name="input_lambda_recreate_missing_package"></a> [lambda\_recreate\_missing\_package](#input\_lambda\_recreate\_missing\_package) | Whether to recreate missing Lambda package if it is missing locally or not. Only used when use_pre_created_image is false. | `bool` | `true` | no |
 | <a name="input_lambda_timeout_seconds"></a> [lambda\_timeout\_seconds](#input\_lambda\_timeout\_seconds) | Controls lambda timeout setting. | `number` | `30` | no |
-| <a name="input_lambda_trigger_on_package_timestamp"></a> [lambda\_trigger\_on\_package\_timestamp](#input\_lambda\_trigger\_on\_package\_timestamp) | Whether to rebuild the Lambda package on every plan. When true (the upstream default), the package build trigger includes a timestamp, so every plan in a fresh working directory, such as each CI run, shows the function as changed even when the source is not. Set to false to rebuild only when the package filename, derived from the source content, changes. | `bool` | `true` | no |
+| <a name="input_lambda_trigger_on_package_timestamp"></a> [lambda\_trigger\_on\_package\_timestamp](#input\_lambda\_trigger\_on\_package\_timestamp) | Whether to rebuild the Lambda package on every plan. When true (the upstream default), the package build trigger includes a timestamp, so every plan in a fresh working directory, such as each CI run, shows the function as changed even when the source is not. Set to false to rebuild only when the package filename, derived from the source content, changes. Only used when use_pre_created_image is false. | `bool` | `true` | no |
 | <a name="input_log_level"></a> [log\_level](#input\_log\_level) | Log level for lambda function | `string` | `"INFO"` | no |
 | <a name="input_push_access_denied_cloudwatch_metrics"></a> [push\_access\_denied\_cloudwatch\_metrics](#input\_push\_access\_denied\_cloudwatch\_metrics) | If true, CloudWatch metrics will be pushed for all access denied events, including events ignored by rules. | `bool` | `true` | no |
 | <a name="input_rule_evaluation_errors_to_slack"></a> [rule\_evaluation\_errors\_to\_slack](#input\_rule\_evaluation\_errors\_to\_slack) | If rule evaluation error occurs, send notification to slack | `bool` | `true` | no |
@@ -418,6 +468,7 @@ Use `lambda_function_arn` output to get the Lambda destination.
 | <a name="input_sns_configuration"></a> [sns\_configuration](#input\_sns\_configuration) | Allows the configuration of the SNS topic per account(s). | <pre>list(object({<br>    accounts      = list(string)<br>    sns_topic_arn = string<br>  }))</pre> | `null` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags to attach to resources | `map(string)` | `{}` | no |
 | <a name="input_use_default_rules"></a> [use\_default\_rules](#input\_use\_default\_rules) | Should default rules be used | `bool` | `true` | no |
+| <a name="input_use_pre_created_image"></a> [use\_pre\_created\_image](#input\_use\_pre\_created\_image) | Use the pre-built Lambda container image published by FivexL (default). Set to false to build a zip package locally with Terraform instead (see lambda_build_in_docker). | `bool` | `true` | no |
 
 ## Outputs
 

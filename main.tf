@@ -4,15 +4,23 @@ module "lambda" {
 
   function_name = var.function_name
   description   = "Send CloudTrail Events to Slack"
-  handler       = "main.lambda_handler"
-  runtime       = "python3.14"
   timeout       = var.lambda_timeout_seconds
   publish       = true
 
-  source_path = [
+  # Pre-built container image from the FivexL release account (default), or a zip
+  # package built locally by Terraform (use_pre_created_image = false).
+  package_type   = var.use_pre_created_image ? "Image" : "Zip"
+  create_package = !var.use_pre_created_image
+  image_uri      = var.use_pre_created_image ? "${var.ecr_owner_account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/${var.ecr_repo_name}:${var.ecr_repo_tag}" : null
+
+  # Zip-only settings. They are null for an image: the handler and runtime are baked into the image.
+  handler = var.use_pre_created_image ? null : "main.lambda_handler"
+  runtime = var.use_pre_created_image ? null : "python3.14"
+
+  source_path = var.use_pre_created_image ? null : [
     {
       path             = "${path.module}/src/"
-      pip_requirements = "${path.module}/src/deploy_requirements.txt"
+      pip_requirements = "${path.module}/src/requirements.txt"
       artifacts_dir    = "${path.root}/builds/"
       patterns = [
         "!.venv/.*",
@@ -20,25 +28,25 @@ module "lambda" {
         "!__pycache__/.*",
         "!tests/.*",
         "!tools/.*",
+        "!docker/.*",
         "!.pytest_cache/.*",
         "!\\.ruff_cache/.*",
         # Development dependency manifests must not ship inside the artifact.
-        # Only deploy_requirements.txt is installed at build time, but a
-        # scanner (e.g. Amazon Inspector) that finds these files in the zip
+        # Only requirements.txt (runtime dependencies) is installed at build time,
+        # but a scanner (e.g. Amazon Inspector) that finds these files in the zip
         # reports the whole dev tool chain as Lambda runtime dependencies.
         "!pyproject\\.toml",
-        "!poetry\\.lock",
+        "!uv\\.lock",
         "!requirements\\.txt",
       ]
     }
   ]
 
-  docker_image             = "lambda/python:3.14"
-  docker_file              = "${path.module}/src/docker/Dockerfile"
-  recreate_missing_package = var.lambda_recreate_missing_package
-  build_in_docker          = var.lambda_build_in_docker
-
-  trigger_on_package_timestamp = var.lambda_trigger_on_package_timestamp
+  docker_image                 = var.use_pre_created_image ? null : "lambda/python:3.14"
+  docker_file                  = var.use_pre_created_image ? null : "${path.module}/src/docker/Dockerfile"
+  recreate_missing_package     = var.use_pre_created_image ? null : var.lambda_recreate_missing_package
+  build_in_docker              = var.use_pre_created_image ? false : var.lambda_build_in_docker
+  trigger_on_package_timestamp = var.use_pre_created_image ? false : var.lambda_trigger_on_package_timestamp
 
   environment_variables = merge(
     {

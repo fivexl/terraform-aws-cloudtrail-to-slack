@@ -151,8 +151,32 @@ variable "lambda_logs_retention_in_days" {
   default     = 30
 }
 
+variable "use_pre_created_image" {
+  description = "Use the pre-built Lambda container image published by FivexL (default). Set to false to build a zip package locally with Terraform instead (see lambda_build_in_docker)."
+  type        = bool
+  default     = true
+}
+
+variable "ecr_owner_account_id" {
+  description = "AWS account ID that owns the ECR repository with the pre-built image. Only used when use_pre_created_image is true."
+  type        = string
+  default     = "222341826240"
+}
+
+variable "ecr_repo_name" {
+  description = "Name of the ECR repository with the pre-built image. Only used when use_pre_created_image is true."
+  type        = string
+  default     = "fivexl-opensource/terraform-aws-cloudtrail-to-slack"
+}
+
+variable "ecr_repo_tag" {
+  description = "Tag of the pre-built image to deploy. The default matches the module release, so upgrading the module upgrades the image. Only used when use_pre_created_image is true."
+  type        = string
+  default     = "5.0.0"
+}
+
 variable "lambda_recreate_missing_package" {
-  description = "Description: Whether to recreate missing Lambda package if it is missing locally or not"
+  description = "Whether to recreate missing Lambda package if it is missing locally or not. Only used when use_pre_created_image is false."
   type        = bool
   default     = true
 }
@@ -160,13 +184,13 @@ variable "lambda_recreate_missing_package" {
 variable "lambda_build_in_docker" {
   type        = bool
   default     = false
-  description = "Whether to build dependencies in Docker"
+  description = "Whether to build dependencies in Docker. Only used when use_pre_created_image is false."
 }
 
 variable "lambda_trigger_on_package_timestamp" {
   type        = bool
   default     = true
-  description = "Whether to rebuild the Lambda package on every plan. When true (the upstream default), the package build trigger includes a timestamp, so every plan in a fresh working directory, such as each CI run, shows the function as changed even when the source is not. Set to false to rebuild only when the package filename, derived from the source content, changes."
+  description = "Whether to rebuild the Lambda package on every plan. When true (the upstream default), the package build trigger includes a timestamp, so every plan in a fresh working directory, such as each CI run, shows the function as changed even when the source is not. Set to false to rebuild only when the package filename, derived from the source content, changes. Only used when use_pre_created_image is false."
 }
 
 variable "tags" {

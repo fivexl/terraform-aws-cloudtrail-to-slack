@@ -1,0 +1,118 @@
+name: Build and Push Docker Image
+
+on:
+  release:
+    types: [published]
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - ".github/workflows/build_docker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: cloudtrail-to-slack:build
+  AWS_REGION: eu-central-1
+  ECR_REPOSITORY: fivexl-opensource/terraform-aws-cloudtrail-to-slack
+
+jobs:
+  build:
+    name: Build and test image
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+
+      - name: Work out the image tag
+        id: tag
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            # Release tags are bare SemVer (for example 5.0.0). Fail loudly on anything else.
+            if [[ ! "${RELEASE_TAG}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Release tag '${RELEASE_TAG}' is not X.Y.Z, refusing to publish an image." >&2
+              exit 1
+            fi
+            TAG="${RELEASE_TAG}"
+          else
+            TAG="$(git rev-parse --short HEAD)"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: src/docker/Dockerfile.image
+          load: true
+          tags: ${{ env.IMAGE_NAME }}
+          provenance: false
+          sbom: false
+
+      - name: Smoke test (import the handler module)
+        run: |
+          docker run --rm -w /var/task --entrypoint python \
+            -e HOOK_URL=https://example.invalid \
+            -e USE_DEFAULT_RULES=true \
+            -e AWS_DEFAULT_REGION=eu-central-1 \
+            "${IMAGE_NAME}" -c "import main"
+
+  push:
+    name: Push image to ECR
+    needs: build
+    # Never on pull requests: those only build and test.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecr-push-terraform-aws-cloudtrail-to-slack
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2
+
+      - name: Skip if this tag already exists
+        id: exists
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          if aws ecr describe-images --repository-name "${ECR_REPOSITORY}" --image-ids imageTag="${TAG}" \
+            --query 'imageDetails[0].[imageDigest,imagePushedAt]' --output text > existing.txt 2>/dev/null; then
+            echo "Tag ${TAG} already exists (digest and push date below). Nothing to push."
+            cat existing.txt
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push image
+        if: steps.exists.outputs.exists != 'true'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: src/docker/Dockerfile.image
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ needs.build.outputs.tag }}
+          provenance: false
+          sbom: false
