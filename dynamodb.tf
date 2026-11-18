@@ -1,7 +1,7 @@
 module "cloudtrail_to_slack_dynamodb_table" {
   count   = var.slack_bot_token != null ? 1 : 0
   source  = "terraform-aws-modules/dynamodb-table/aws"
-  version = "3.3.0"
+  version = "5.5.2"
   name    = var.dynamodb_table_name
 
   hash_key           = "principal_structure_and_action_hash"
