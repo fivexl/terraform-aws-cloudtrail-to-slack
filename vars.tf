@@ -6,7 +6,7 @@
 # -------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------
 # Slack Webhook URL configuration:
-variable "configuration" {
+variable "slack_webhook_configuration" {
   description = "Allows the configuration of the Slack webhook URL per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization."
   type = list(object({
     accounts       = list(string)
@@ -16,7 +16,7 @@ variable "configuration" {
 }
 
 variable "default_slack_hook_url" {
-  description = "The Slack incoming webhook URL to be used if the AWS account ID does not match any account ID in the configuration variable."
+  description = "The Slack incoming webhook URL to be used if the AWS account ID does not match any account ID in the slack_webhook_configuration variable."
   type        = string
   default     = null
 }
@@ -41,7 +41,7 @@ variable "slack_app_configuration" {
 }
 
 variable "default_slack_channel_id" {
-  description = "The Slack channel ID to be used if the AWS account ID does not match any account ID in the configuration variable."
+  description = "The Slack channel ID to be used if the AWS account ID does not match any account ID in the slack_app_configuration variable."
   type        = string
   default     = null
 }
@@ -151,8 +151,42 @@ variable "lambda_logs_retention_in_days" {
   default     = 30
 }
 
+variable "use_pre_created_image" {
+  description = "Use the pre-built Lambda container image published by FivexL (default). Set to false to build a zip package locally with Terraform instead (see lambda_build_in_docker)."
+  type        = bool
+  default     = true
+}
+
+variable "ecr_owner_account_id" {
+  description = "AWS account ID that owns the ECR repository with the pre-built image. Only used when use_pre_created_image is true."
+  type        = string
+  default     = "222341826240"
+
+  validation {
+    condition     = can(regex("^[0-9]{12}$", var.ecr_owner_account_id))
+    error_message = "ecr_owner_account_id must be a 12 digit AWS account ID."
+  }
+}
+
+variable "ecr_repo_name" {
+  description = "Name of the ECR repository with the pre-built image. Only used when use_pre_created_image is true."
+  type        = string
+  default     = "fivexl-opensource/terraform-aws-cloudtrail-to-slack"
+}
+
+variable "ecr_repo_tag" {
+  description = "Tag of the pre-built image to deploy. The default matches the module release, so upgrading the module upgrades the image. Only used when use_pre_created_image is true."
+  type        = string
+  default     = "5.0.0"
+
+  validation {
+    condition     = length(trimspace(var.ecr_repo_tag)) > 0
+    error_message = "ecr_repo_tag must not be empty."
+  }
+}
+
 variable "lambda_recreate_missing_package" {
-  description = "Description: Whether to recreate missing Lambda package if it is missing locally or not"
+  description = "Whether to recreate missing Lambda package if it is missing locally or not. Only used when use_pre_created_image is false."
   type        = bool
   default     = true
 }
@@ -160,13 +194,13 @@ variable "lambda_recreate_missing_package" {
 variable "lambda_build_in_docker" {
   type        = bool
   default     = false
-  description = "Whether to build dependencies in Docker"
+  description = "Whether to build dependencies in Docker. Only used when use_pre_created_image is false."
 }
 
 variable "lambda_trigger_on_package_timestamp" {
   type        = bool
   default     = true
-  description = "Whether to rebuild the Lambda package on every plan. When true (the upstream default), the package build trigger includes a timestamp, so every plan in a fresh working directory, such as each CI run, shows the function as changed even when the source is not. Set to false to rebuild only when the package filename, derived from the source content, changes."
+  description = "Whether to rebuild the Lambda package on every plan. When true (the upstream default), the package build trigger includes a timestamp, so every plan in a fresh working directory, such as each CI run, shows the function as changed even when the source is not. Set to false to rebuild only when the package filename, derived from the source content, changes. Only used when use_pre_created_image is false."
 }
 
 variable "tags" {
@@ -229,7 +263,7 @@ variable "create_bucket_notification" {
   type        = bool
 }
 
-variable "enable_eventbridge_notificaitons" {
+variable "enable_eventbridge_notifications" {
   description = "Whether to enable EventBridge notifications for S3 bucket"
   default     = false
   type        = bool

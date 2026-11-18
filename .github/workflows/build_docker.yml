@@ -1,0 +1,141 @@
+name: Build and Push Docker Image
+
+on:
+  release:
+    types: [published]
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - ".github/workflows/build_docker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: cloudtrail-to-slack:build
+  AWS_REGION: eu-central-1
+  ECR_REPOSITORY: fivexl-opensource/terraform-aws-cloudtrail-to-slack
+
+jobs:
+  build:
+    name: Build and test image
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+
+      - name: Work out the image tag
+        id: tag
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            # Release tags are bare SemVer (for example 5.0.0). Fail loudly on anything else.
+            if [[ ! "${RELEASE_TAG}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Release tag '${RELEASE_TAG}' is not X.Y.Z, refusing to publish an image." >&2
+              exit 1
+            fi
+            # The module deploys the image tagged with the default of ecr_repo_tag, so the two must match.
+            DEFAULT_TAG="$(sed -n '/variable "ecr_repo_tag"/,/^}/p' vars.tf | sed -n 's/^[[:space:]]*default[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p')"
+            if [[ "${DEFAULT_TAG}" != "${RELEASE_TAG}" ]]; then
+              echo "Release tag '${RELEASE_TAG}' does not match the ecr_repo_tag default '${DEFAULT_TAG}' in vars.tf." >&2
+              echo "Users of this release would deploy an image tag that does not exist. Fix vars.tf and release again." >&2
+              exit 1
+            fi
+            TAG="${RELEASE_TAG}"
+          else
+            TAG="${GITHUB_SHA::7}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: src/docker/Dockerfile.image
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.IMAGE_NAME }}
+          provenance: false
+          sbom: false
+
+      - name: Smoke test (import the handler module)
+        run: |
+          docker run --rm -w /var/task --entrypoint python \
+            -e HOOK_URL=https://example.invalid \
+            -e USE_DEFAULT_RULES=true \
+            -e AWS_DEFAULT_REGION=eu-central-1 \
+            "${IMAGE_NAME}" -c "import main; assert callable(main.lambda_handler)"
+
+      # The push job publishes exactly this tested image, not a fresh rebuild.
+      - name: Save tested image
+        if: github.event_name != 'pull_request'
+        run: docker save "${IMAGE_NAME}" -o image.tar
+
+      - name: Upload tested image
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image
+          path: image.tar
+          retention-days: 1
+
+  push:
+    name: Push image to ECR
+    needs: build
+    # Only for a published release or a manual run from main. Never on pull requests.
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Download tested image
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: image
+
+      - name: Load image
+        run: docker load -i image.tar
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecr-push-terraform-aws-cloudtrail-to-slack
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2
+
+      - name: Push image unless the tag already exists
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          set -uo pipefail
+          rc=0
+          out="$(aws ecr describe-images --repository-name "${ECR_REPOSITORY}" --image-ids imageTag="${TAG}" \
+            --query 'imageDetails[0].[imageDigest,imagePushedAt]' --output text 2>&1)" || rc=$?
+          if [[ ${rc} -eq 0 ]]; then
+            echo "Tag ${TAG} already exists (digest and push date below). Nothing to push."
+            echo "${out}"
+            exit 0
+          fi
+          # Only "not found" means the tag is free. Any other error (permissions, throttling) must fail the job.
+          if ! grep -q "ImageNotFoundException" <<< "${out}"; then
+            echo "Could not check whether tag ${TAG} exists:" >&2
+            echo "${out}" >&2
+            exit 1
+          fi
+          docker tag "${IMAGE_NAME}" "${REGISTRY}/${ECR_REPOSITORY}:${TAG}"
+          docker push "${REGISTRY}/${ECR_REPOSITORY}:${TAG}"

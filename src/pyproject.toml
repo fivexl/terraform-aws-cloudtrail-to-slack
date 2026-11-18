@@ -1,34 +1,33 @@
-[tool.poetry]
+[project]
 name = "terraform-aws-cloudtrail-to-slack"
-version = "3.2.2"
+# Placeholder required by uv. The real version is the git tag / GitHub Release.
+version = "0.0.0"
 description = "Parse AWS CloudTrail events and send alerts to Slack for events that match pre-configured rules"
-authors = ["FivexL"]
-readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "python-dateutil>=2.9.0",
+    "slack-sdk>=3.21.3,<4",
+]
 
-[tool.poetry.dependencies]
-python = "^3.14"
-slack-sdk = "^3.21.3"
+# No [build-system]: this is an application, not an installable package.
+# The Lambda code is copied as plain files, and the dependencies are installed
+# from the lock file (see docker/Dockerfile.image).
 
-# Full list of dependencies, for development.
-# Can be installed with `poetry install --with dev`.
-[tool.poetry.group.dev.dependencies]
-python = "^3.14"
-pytest = "^7.2.2"
-black = "^26.5.1"
-boto3 = "^1.26.97"
-ruff = "^0.15.0"
-slack-sdk = "^3.21.3"
-# Transitive dependencies pinned to their patched versions so the exported
-# lockfiles do not ship known-vulnerable versions:
-#   click   - CVE-2026-7246 (command injection in click.edit), fixed in 8.3.3
-#   urllib3 - CVE-2025-66418, CVE-2025-66471, CVE-2026-21441 (decompression
-#             bombs / unbounded decompression chains), all fixed by 2.6.3
-click = ">=8.3.3"
-urllib3 = ">=2.6.3"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+# Development dependencies. Installed with `uv sync`.
+[dependency-groups]
+dev = [
+    "pytest>=7.2.2,<8",
+    "black>=26.5.1,<27",
+    "boto3>=1.26.97,<2",
+    "ruff>=0.15.0,<0.16",
+    # Transitive dependencies pinned to their patched versions so the lock
+    # file does not ship known-vulnerable versions:
+    #   click   - CVE-2026-7246 (command injection in click.edit), fixed in 8.3.3
+    #   urllib3 - CVE-2025-66418, CVE-2025-66471, CVE-2026-21441 (decompression
+    #             bombs / unbounded decompression chains), all fixed by 2.6.3
+    "click>=8.3.3",
+    "urllib3>=2.6.3",
+]
 
 [tool.black]
 line-length = 140
@@ -125,6 +124,6 @@ reportGeneralTypeIssues = true
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q"
-testpaths = ["src/tests"]
+testpaths = ["tests"]
 xfail_strict = true
 filterwarnings = []

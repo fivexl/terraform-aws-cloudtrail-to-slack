@@ -30,9 +30,23 @@ resource "aws_cloudtrail" "main" {
   }
 }
 
+module "logging_bucket" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "5.18.0"
+
+  # Bucket that receives the S3 access logs of the CloudTrail bucket
+  attach_access_log_delivery_policy = true
+  bucket                            = ""
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 module "cloudtrail_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "3.7.0"
+  version = "5.18.0"
 
   bucket = ""
 
@@ -101,8 +115,8 @@ locals {
 
 module "cloudtrail_to_slack" {
   source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "4.2.0"
-  cloudtrail_logs_s3_bucket_name = aws_s3_bucket.cloudtrail.id
+  version                        = "4.5.3"
+  cloudtrail_logs_s3_bucket_name = module.cloudtrail_bucket.s3_bucket_id
 
   # String of comma-separated eventNames that you want to track
   events_to_track = local.events_to_track

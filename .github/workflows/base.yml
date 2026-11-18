@@ -6,17 +6,68 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  python-job:
-    uses: fivexl/github-reusable-workflows/.github/workflows/python-job.yml@main
-    with:
-      python-version: "3.14"
-      aws-default-region: "eu-central-1"
-      working-directory: "src"
+  test-job:
+    name: Run Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
 
-  terraform-job:
-    uses: fivexl/github-reusable-workflows/.github/workflows/terraform-job.yml@main
-    with:
-      terraform-version: "1.4.4"
-      aws-default-region: "eu-central-1"
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.14"
+
+      - name: Install uv
+        run: pip3 install uv==0.12.3
+
+      - name: Install pre-commit
+        run: pip3 install pre-commit==4.7.0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4
+        with:
+          terraform_version: "1.14.2"
+
+      - name: Install tflint
+        env:
+          TFLINT_VERSION: v0.64.0
+          TFLINT_ZIP_SHA256: cca9d13e2e1d7a2c627af60ff899a3c9b74212899416aeb96ec764d2ef954537
+        run: |
+          set -euo pipefail
+          curl -sSLO "https://github.com/terraform-linters/tflint/releases/download/${TFLINT_VERSION}/tflint_linux_amd64.zip"
+          echo "${TFLINT_ZIP_SHA256}  tflint_linux_amd64.zip" | sha256sum -c -
+          unzip -q tflint_linux_amd64.zip
+          sudo install -c -v tflint /usr/local/bin/
+          rm -f tflint_linux_amd64.zip tflint
+
+      - name: Install terraform-docs
+        run: |
+          curl -Lo /tmp/terraform-docs.tar.gz https://github.com/terraform-docs/terraform-docs/releases/download/v0.22.0/terraform-docs-v0.22.0-linux-amd64.tar.gz
+          echo "8ec66616777c66f3e622af4f2853e8ae399f38908ad4b262c9c526dd42501369  /tmp/terraform-docs.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/terraform-docs.tar.gz -C /tmp
+          sudo mv /tmp/terraform-docs /usr/local/bin/
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.76.2
+
+      - name: Run tests
+        run: bash test.sh
+
+      - name: Show uncommitted changes
+        if: always()
+        run: |
+          echo "=== Git Status ==="
+          git status
+          echo "=== Git Diff ==="
+          git diff
