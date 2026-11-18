@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
+# Runs the same checks as CI.
+set -e
 
-set -ex
+cd src
+uv sync --no-install-project
+LOG_LEVEL=DEBUG uv run pytest -q "$@"
+cd ..
 
-flake8 src/main.py
-pylint -E src/main.py
+pre-commit run -a

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
+# Local development setup: installs the Python dev dependencies with uv.
+set -e
 
-[ -d env ] && rm -rf env
-
-python3 -m venv env
-source env/bin/activate
-pip install -r requirements.txt
+cd src
+uv sync --no-install-project
