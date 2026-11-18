@@ -1,7 +1,7 @@
 repos:
 # Spelling
 -   repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1
+    rev: v2.4.3
     hooks:
     -   id: codespell
         args: [-C, "3", -L, "notin"]
@@ -30,13 +30,13 @@ repos:
         files: ^src/(pyproject\.toml|uv\.lock)$
         pass_filenames: false
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.22
+    rev: v0.17.3
     hooks:
-    -   id: ruff
+    -   id: ruff-check
         args: [--exit-non-zero-on-fix]
 # Terraform
 -   repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.104.0
+    rev: v1.109.4
     hooks:
     -   id: terraform_fmt
     -   id: terraform_tflint
