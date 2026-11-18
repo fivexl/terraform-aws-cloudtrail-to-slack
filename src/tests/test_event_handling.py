@@ -4,8 +4,10 @@ import gzip
 import io
 import json
 from unittest.mock import MagicMock
+from urllib.parse import quote_plus
 
 import pytest
+from botocore.exceptions import ClientError
 
 import main
 from config import SlackAppConfig, SlackWebhookConfig
@@ -35,6 +37,8 @@ class FakeS3:
         self.objects = objects
 
     def get_object(self, Bucket, Key):  # noqa: ANN001, ANN201, N803
+        if (Bucket, Key) not in self.objects:
+            raise ClientError({"Error": {"Code": "NoSuchKey", "Message": "The specified key does not exist."}}, "GetObject")
         return {"Body": io.BytesIO(gzip.compress(json.dumps(self.objects[(Bucket, Key)]).encode()))}
 
 
@@ -82,8 +86,8 @@ def test_log_file_events_are_posted(monkeypatch, slack_posts):
     other = CREATE_USER | {"eventName": "ListUsers", "eventID": "event-2"}
     monkeypatch.setattr(main, "s3_client", FakeS3({("trail-bucket", LOG_KEY): {"Records": [other, CREATE_USER]}}))
 
-    # S3 notifications URL-encode the object key.
-    assert main.lambda_handler(s3_notification(LOG_KEY.replace(" ", "%20")), None) == 200  # noqa: PLR2004
+    # S3 notifications URL-encode the object key, with spaces as "+".
+    assert main.lambda_handler(s3_notification(quote_plus(LOG_KEY)), None) == 200  # noqa: PLR2004
 
     (text,) = posted_text(slack_posts)
     assert "event-1" in text
@@ -96,6 +100,7 @@ def test_failure_to_read_log_file_is_reported_to_slack(monkeypatch, slack_posts)
     (text,) = posted_text(slack_posts)
     assert "Failed to process event" in text
     assert "AWSLogs/missing.json.gz" in text
+    assert "NoSuchKey" in text
 
 
 def test_removed_log_file_is_reported_to_slack(slack_posts):
@@ -108,7 +113,9 @@ def test_removed_log_file_is_reported_to_slack(slack_posts):
 def test_digest_file_does_not_stop_other_records(monkeypatch, slack_posts):
     monkeypatch.setattr(main, "s3_client", FakeS3({("trail-bucket", "AWSLogs/log.json.gz"): {"Records": [CREATE_USER]}}))
     main.lambda_handler(s3_notification("AWSLogs/CloudTrail-Digest/digest.json.gz", "AWSLogs/log.json.gz"), None)
-    assert len(slack_posts) == 1
+    (text,) = posted_text(slack_posts)
+    assert "event-1" in text
+    assert "Failed to process event" not in text
 
 
 def test_matched_event_is_posted_and_forwarded_to_sns(monkeypatch, slack_posts, fake_sns):
@@ -150,12 +157,16 @@ def test_rule_evaluation_errors_go_to_slack_only_when_enabled(monkeypatch, slack
     ],
     ids=["disabled", "reported", "ignored"],
 )
-def test_access_denied_metrics(monkeypatch, slack_posts, enabled, ignore_rules, metrics):  # noqa: ARG001
+@pytest.mark.usefixtures("slack_posts")
+def test_access_denied_metrics(monkeypatch, enabled, ignore_rules, metrics):
     monkeypatch.setattr(main.cfg, "push_access_denied_cloudwatch_metrics", enabled)
     main.handle_event(ACCESS_DENIED, LOG_KEY, ['event["errorCode"] == "AccessDenied"'], ignore_rules)
     calls = main.cloudwatch_client.put_metric_data.call_args_list
     assert [c.kwargs["MetricData"][0]["MetricName"] for c in calls] == metrics
-    assert all(c.kwargs["Namespace"] == "CloudTrailToSlack/AccessDeniedEvents" for c in calls)
+    for c in calls:
+        assert c.kwargs["Namespace"] == "CloudTrailToSlack/AccessDeniedEvents"
+        (metric,) = c.kwargs["MetricData"]
+        assert (metric["Value"], metric["Unit"]) == (1, "Count")
 
 
 def test_metric_failure_does_not_block_slack_post(monkeypatch, slack_posts):
@@ -165,7 +176,8 @@ def test_metric_failure_does_not_block_slack_post(monkeypatch, slack_posts):
     assert len(slack_posts) == 1
 
 
-def test_slack_app_threads_repeated_events(monkeypatch, slack_posts):  # noqa: ARG001
+@pytest.mark.usefixtures("slack_posts")
+def test_slack_app_threads_repeated_events(monkeypatch):
     monkeypatch.setattr(main, "slack_config", SlackAppConfig(bot_token="xoxb-test", default_channel_id="C_DEFAULT", configuration=[]))
     web_client = MagicMock()
     web_client.return_value.chat_postMessage.return_value = {"ok": True, "ts": "1700000000.000100"}

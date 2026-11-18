@@ -62,14 +62,20 @@ def test_stored_thread_is_found_for_similar_event(cfg, fake_dynamodb):
     assert get_thread_ts_from_dynamodb(cfg, make_event("DeleteUser"), fake_dynamodb) is None
 
 
-def test_stored_item_expires_after_ttl(cfg, fake_dynamodb):
+@pytest.mark.parametrize("time_to_live", [60, 900, 86400])
+def test_stored_item_expiry_uses_configured_ttl(cfg, fake_dynamodb, time_to_live):
+    cfg.dynamodb_time_to_live = time_to_live
     before = int(time.time())
     put_event_to_dynamodb(make_event(), "1700000000.000100", fake_dynamodb, cfg)
     (item,) = fake_dynamodb.tables[TABLE].values()
-    assert before + 900 <= int(item["ttl"]["N"]) <= int(time.time()) + 900
+    assert before + time_to_live <= int(item["ttl"]["N"]) <= int(time.time()) + time_to_live
 
-    # DynamoDB deletes expired items lazily, so the Lambda must ignore them itself.
-    item["ttl"]["N"] = str(before - 1)
+
+# DynamoDB deletes expired items lazily, so the Lambda must ignore them itself.
+def test_expired_item_is_ignored(cfg, fake_dynamodb):
+    put_event_to_dynamodb(make_event(), "1700000000.000100", fake_dynamodb, cfg)
+    ((key, item),) = fake_dynamodb.tables[TABLE].items()
+    fake_dynamodb.tables[TABLE][key] = item | {"ttl": {"N": str(int(time.time()) - 1)}}
     assert get_thread_ts_from_dynamodb(cfg, make_event(), fake_dynamodb) is None
 
 
