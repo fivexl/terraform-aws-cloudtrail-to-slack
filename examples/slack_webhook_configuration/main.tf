@@ -115,7 +115,7 @@ locals {
 
 module "cloudtrail_to_slack" {
   source                         = "fivexl/cloudtrail-to-slack/aws"
-  version                        = "4.5.3"
+  version                        = "5.0.0"
   cloudtrail_logs_s3_bucket_name = module.cloudtrail_bucket.s3_bucket_id
 
   # String of comma-separated eventNames that you want to track
@@ -129,7 +129,7 @@ module "cloudtrail_to_slack" {
   default_slack_hook_url = data.aws_ssm_parameter.default_hook.value
 
   # Optional, allows sending notifications to different Slack webhooks for different accounts.
-  configuration = [
+  slack_webhook_configuration = [
     {
       "accounts" : ["111111111111"],
       "slack_hook_url" : data.aws_ssm_parameter.dev_hook.value
