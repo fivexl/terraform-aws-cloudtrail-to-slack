@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Runs the same checks as CI.
+# Runs the same checks as CI. Run it from anywhere.
 set -e
 
-cd src
-uv sync --no-install-project
-LOG_LEVEL=DEBUG uv run pytest -q "$@"
+cd "$(dirname "$0")/src"
+uv sync --locked --no-install-project
+LOG_LEVEL=DEBUG uv run --locked pytest -q "$@"
 cd ..
 
 pre-commit run -a

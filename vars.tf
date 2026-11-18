@@ -161,6 +161,11 @@ variable "ecr_owner_account_id" {
   description = "AWS account ID that owns the ECR repository with the pre-built image. Only used when use_pre_created_image is true."
   type        = string
   default     = "222341826240"
+
+  validation {
+    condition     = can(regex("^[0-9]{12}$", var.ecr_owner_account_id))
+    error_message = "ecr_owner_account_id must be a 12 digit AWS account ID."
+  }
 }
 
 variable "ecr_repo_name" {
@@ -173,6 +178,11 @@ variable "ecr_repo_tag" {
   description = "Tag of the pre-built image to deploy. The default matches the module release, so upgrading the module upgrades the image. Only used when use_pre_created_image is true."
   type        = string
   default     = "5.0.0"
+
+  validation {
+    condition     = length(trimspace(var.ecr_repo_tag)) > 0
+    error_message = "ecr_repo_tag must not be empty."
+  }
 }
 
 variable "lambda_recreate_missing_package" {

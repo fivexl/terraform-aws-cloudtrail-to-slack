@@ -224,7 +224,7 @@ resource "aws_lambda_permission" "s3" {
   count          = var.enable_s3_sns_fanout ? 0 : 1
   statement_id   = "AllowExecutionFromS3Bucket"
   action         = "lambda:InvokeFunction"
-  function_name  = module.lambda.lambda_function_name
+  function_name  = module.lambda.lambda_function_arn
   principal      = "s3.amazonaws.com"
   source_arn     = data.aws_s3_bucket.cloudtrail.arn
   source_account = data.aws_caller_identity.current.account_id
@@ -235,7 +235,7 @@ resource "aws_lambda_permission" "sns" {
   count         = var.enable_s3_sns_fanout ? 1 : 0
   statement_id  = "AllowExecutionFromSNS"
   action        = "lambda:InvokeFunction"
-  function_name = module.lambda.lambda_function_name
+  function_name = module.lambda.lambda_function_arn
   principal     = "sns.amazonaws.com"
   source_arn    = var.create_s3_sns_fanout_topic ? aws_sns_topic.s3_notifications[0].arn : var.s3_sns_fanout_topic_arn
 }

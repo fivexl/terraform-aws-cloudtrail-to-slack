@@ -19,7 +19,8 @@ repos:
         language: python
         require_serial: true
         types_or: [python, pyi]
-        additional_dependencies: [black==26.5.1]
+        # Keep this version in sync with black in src/uv.lock
+        additional_dependencies: [black==26.10.1]
     # Keeps src/requirements.txt (runtime dependencies, used by the zip build) in sync with uv.lock
     -   id: uv-export-src
         name: uv export src requirements

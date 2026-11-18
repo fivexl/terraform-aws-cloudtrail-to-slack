@@ -356,11 +356,31 @@ The image tag defaults to the module release (`ecr_repo_tag`), so upgrading the 
 | `ecr_owner_account_id` | `222341826240` | Account that owns the ECR repository. |
 | `lambda_build_in_docker` | `false` | Zip build only: build the dependencies in Docker. |
 
+### Requirements for the pre-built image
+
+* **Region:** the image is replicated to the regions FivexL runs in. The Lambda function must be in a region that has the image.
+  If the pull fails with "Source image ... is not valid" or an access error, use `use_pre_created_image = false`
+  or mirror the image into your own account (set `ecr_owner_account_id` and `ecr_repo_name`).
+* **Permissions:** Lambda pulls the image from the ECR repository in the owner account. The repository policy there must allow it,
+  and the identity that runs `terraform apply` needs `ecr:BatchGetImage` and `ecr:GetDownloadUrlForLayer` on that repository
+  (a restrictive deployer role or an SCP can block this). The Lambda execution role needs no ECR permissions.
+* **Partitions:** the image host is `<account>.dkr.ecr.<region>.amazonaws.com`. AWS China and GovCloud are not served,
+  set `use_pre_created_image = false` there.
+* **Architecture:** the image is built for `x86_64` (the Lambda default).
+
 ## Upgrading to 5.0.0
 
 5.0.0 is a major release: the Lambda function changes from a zip package to a container image, so
 Terraform **replaces** the function. The function name, IAM role, triggers and settings stay the same, and the
 function is briefly unavailable while it is replaced. Review the plan before you apply it.
+
+What else changes in the same apply:
+
+* The Lambda versions and aliases are recreated (published version numbers start again), and any provisioned concurrency
+  configured on the function is lost.
+* The Lambda permissions for S3 and SNS are recreated, and the S3 notification or SNS subscription is updated in place.
+  Check that events still arrive after the apply (see the plan before you apply it).
+* The runtime dependency `slack-sdk` is updated from 3.34.0 to 3.47.0.
 
 To keep the previous behaviour, set `use_pre_created_image = false`. The zip build still honours
 `lambda_build_in_docker`.
@@ -376,7 +396,9 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
   `src/docker/Dockerfile` is only the build environment for the zip fallback.
 * The `Build and Push Docker Image` workflow builds and tests the image on every pull request, and pushes it to ECR
   when a GitHub Release is published (tag `X.Y.Z`) or when it is started by hand from `main` (tag = short commit SHA).
-  Pushes use GitHub OIDC with a role that trusts only `main` and tags. Existing tags are never overwritten.
+  Pushes use GitHub OIDC with a role that trusts only `main` and tags. The ECR repository has immutable tags, and the
+  workflow skips the push when the tag already exists, so a published tag is never overwritten.
+  A release fails early if its tag does not match the `ecr_repo_tag` default in `vars.tf`.
 * Run the checks locally with `bash test.sh` (needs `uv` and `pre-commit`).
 
 ### Release steps
