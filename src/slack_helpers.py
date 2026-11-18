@@ -10,7 +10,7 @@ from slack_sdk.web.slack_response import SlackResponse
 logger = get_logger()
 
 
-def post_message(  # noqa: ANN201
+def post_message(
     slack_config: SlackAppConfig | SlackWebhookConfig,
     message: dict,
     account_id: str | None = None,
@@ -20,7 +20,7 @@ def post_message(  # noqa: ANN201
     if isinstance(slack_config, SlackAppConfig):
         if account_id and slack_config.configuration:
             channel_id = next(
-                (cfg["slack_channel_id"] for cfg in slack_config.configuration if account_id in cfg["accounts"]),  # noqa: E501
+                (cfg["slack_channel_id"] for cfg in slack_config.configuration if account_id in cfg["accounts"]),
                 slack_config.default_channel_id,
             )
         else:
@@ -35,7 +35,7 @@ def post_message(  # noqa: ANN201
     if isinstance(slack_config, SlackWebhookConfig):
         if account_id and slack_config.configuration:
             hook_url = next(
-                (cfg["slack_hook_url"] for cfg in slack_config.configuration if account_id in cfg["accounts"]),  # noqa: E501
+                (cfg["slack_hook_url"] for cfg in slack_config.configuration if account_id in cfg["accounts"]),
                 slack_config.default_hook_url,
             )
         else:

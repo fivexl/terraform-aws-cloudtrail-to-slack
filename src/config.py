@@ -20,16 +20,20 @@ class SlackAppConfig:
     configuration: List[Dict]
 
 
+def get_list_from_env_var(env_var_name: str) -> List[Dict]:
+    # Terraform passes an unset list input as jsonencode(null), the string "null".
+    value = json.loads(os.environ.get(env_var_name) or "null")
+    return [] if value is None else value
+
+
 def get_slack_config() -> Union[SlackWebhookConfig, SlackAppConfig]:
 
     if bot_token := os.environ.get("SLACK_BOT_TOKEN"):
-
         default_channel_id: str | None = os.environ.get("DEFAULT_SLACK_CHANNEL_ID")
         if not default_channel_id:
             raise Exception("Environment variable DEFAULT_SLACK_CHANNEL_ID must be set.")
 
-        raw_configuration: str | None = os.environ.get("SLACK_APP_CONFIGURATION")
-        configuration: List[Dict] = json.loads(raw_configuration) if raw_configuration else []
+        configuration = get_list_from_env_var("SLACK_APP_CONFIGURATION")
 
         return SlackAppConfig(
             bot_token=bot_token,
@@ -38,9 +42,7 @@ def get_slack_config() -> Union[SlackWebhookConfig, SlackAppConfig]:
         )
 
     elif hook_url := os.environ.get("HOOK_URL"):
-
-        raw_configuration: str | None = os.environ.get("CONFIGURATION")
-        configuration: List[Dict] = json.loads(raw_configuration) if raw_configuration else []
+        configuration = get_list_from_env_var("CONFIGURATION")
 
         return SlackWebhookConfig(
             default_hook_url=hook_url,
@@ -52,16 +54,15 @@ def get_slack_config() -> Union[SlackWebhookConfig, SlackAppConfig]:
 
 
 class Config:
-    def __init__(self):  # noqa: ANN101 ANN204
+    def __init__(self):  # noqa: ANN204
 
         self.default_sns_topic_arn: str | None = os.environ.get("DEFAULT_SNS_TOPIC_ARN")
-        raw_sns_configuration: str = os.environ.get("SNS_CONFIGURATION", "")
-        self.sns_configuration: List[Dict] = json.loads(raw_sns_configuration) if raw_sns_configuration else []
+        self.sns_configuration: List[Dict] = get_list_from_env_var("SNS_CONFIGURATION")
 
         self.rule_evaluation_errors_to_slack: bool = self.get_bool_from_env_var("RULE_EVALUATION_ERRORS_TO_SLACK")
         self.rules_separator: str = os.environ.get("RULES_SEPARATOR", ",")
-        self.user_rules: List[str] = self.parse_rules_from_string(os.environ.get("RULES"), self.rules_separator)  # noqa: E501
-        self.ignore_rules: List[str] = self.parse_rules_from_string(os.environ.get("IGNORE_RULES"), self.rules_separator)  # noqa: E501
+        self.user_rules: List[str] = self.parse_rules_from_string(os.environ.get("RULES"), self.rules_separator)
+        self.ignore_rules: List[str] = self.parse_rules_from_string(os.environ.get("IGNORE_RULES"), self.rules_separator)
         self.use_default_rules: bool = self.get_bool_from_env_var("USE_DEFAULT_RULES")
         self.events_to_track: str | None = os.environ.get("EVENTS_TO_TRACK")
 
@@ -94,7 +95,7 @@ class Config:
 
 
 class JsonFormatter(logging.Formatter):
-    def format(self, record):  # noqa: ANN001, ANN201, ANN101
+    def format(self, record):  # noqa: ANN001, ANN201
         log_entry = {
             "level": record.levelname,
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f"),

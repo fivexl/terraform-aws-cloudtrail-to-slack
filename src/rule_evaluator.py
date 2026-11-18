@@ -445,9 +445,7 @@ def _compile_rule(expression: str) -> ast.Expression:
     return compiled
 
 
-def evaluate_rule(
-    expression: str, event: Dict[str, Any]
-) -> Any:  # noqa: ANN401 (a rule may return any value; the caller requires ``is True``)
+def evaluate_rule(expression: str, event: Dict[str, Any]) -> Any:  # noqa: ANN401 (a rule may return any value; the caller requires ``is True``)
     """Evaluate a rule ``expression`` with ``event`` bound to the flattened event.
 
     Raises :class:`SyntaxError` for a malformed expression, :class:`NameError`

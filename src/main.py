@@ -43,7 +43,7 @@ sns_client = boto3.client("sns")
 cloudwatch_client = boto3.client("cloudwatch")
 
 
-def lambda_handler(incoming_event: Dict[str, Any], _) -> int:  # noqa: ANN001, PLR0912 (branches from SNS/S3 handling)
+def lambda_handler(incoming_event: Dict[str, Any], _) -> int:  # noqa: ANN001
     """
     Lambda handler supporting S3 notifications from:
     1. Direct S3 notifications (S3 -> Lambda)
@@ -87,7 +87,7 @@ def lambda_handler(incoming_event: Dict[str, Any], _) -> int:  # noqa: ANN001, P
         for record in s3_notification_event["Records"]:
             event_name: str = record["eventName"]
             if "Digest" in record["s3"]["object"]["key"]:
-                return 200
+                continue
 
             if event_name.startswith("ObjectRemoved"):
                 handle_removed_object_record(
@@ -148,7 +148,7 @@ def get_cloudtrail_log_records(record: Dict) -> Dict | None:
     if "s3" not in record:
         raise AssertionError(f"received record does not contain s3 section: {record}")
     bucket = record["s3"]["bucket"]["name"]
-    key = urllib.parse.unquote_plus(record["s3"]["object"]["key"], encoding="utf-8")  # type: ignore # noqa: PGH003, E501
+    key = urllib.parse.unquote_plus(record["s3"]["object"]["key"], encoding="utf-8")  # type: ignore # noqa: PGH003
     # Do not process digest files
     try:
         response = s3_client.get_object(Bucket=bucket, Key=key)
@@ -185,18 +185,16 @@ def should_message_be_processed(
     for ignore_rule in ignore_rules:
         try:
             if evaluate_rule(ignore_rule, flat_event) is True:
-                logger.info(
-                    {"Event matched ignore rule and will not be processed": {"ignore_rule": ignore_rule, "flat_event": flat_event}}
-                )  # noqa: E501
+                logger.info({"Event matched ignore rule and will not be processed": {"ignore_rule": ignore_rule, "flat_event": flat_event}})
                 return ProcessingResult(should_be_processed=False, errors=errors, is_ignored=True)
         except Exception as e:
-            logger.exception({"Event parsing failed": {"error": e, "ignore_rule": ignore_rule, "flat_event": flat_event}})  # noqa: E501
+            logger.exception({"Event parsing failed": {"error": e, "ignore_rule": ignore_rule, "flat_event": flat_event}})
             errors.append({"error": e, "rule": ignore_rule})
 
     for rule in rules:
         try:
             if evaluate_rule(rule, flat_event) is True:
-                logger.info({"Event matched rule and will be processed": {"rule": rule, "flat_event": flat_event}})  # noqa: E501
+                logger.info({"Event matched rule and will be processed": {"rule": rule, "flat_event": flat_event}})
                 return ProcessingResult(True, errors)
         except Exception as e:
             logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}})
@@ -372,7 +370,7 @@ if __name__ == "__main__":
     os.environ["EVENTS_TO_TRACK"] = ""
     os.environ["LOG_LEVEL"] = ""
     os.environ["DEFAULT_SNS_TOPIC_ARN"] = ""
-    os.environ["SNS_CONFIGURATION"] = '[{""}]'
+    os.environ["SNS_CONFIGURATION"] = "[]"
 
     cfg = Config()
     slack_config = get_slack_config()
