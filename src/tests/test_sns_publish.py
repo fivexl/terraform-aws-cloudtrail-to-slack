@@ -8,7 +8,7 @@ import pytest
 from config import Config
 from sns import event_to_sns_message, send_message_to_sns
 
-# ruff: noqa: ANN201, ANN001, E501
+# ruff: noqa: ANN201, ANN001
 
 DEFAULT_TOPIC = "arn:aws:sns:us-east-1:000000000000:default"
 PROD_TOPIC = "arn:aws:sns:us-east-1:000000000000:prod"

@@ -4,7 +4,7 @@ import pytest
 from main import ProcessingResult, flatten_json, should_message_be_processed
 from rules import default_rules
 
-# ruff: noqa: ANN201, ANN001, E501
+# ruff: noqa: ANN201, ANN001
 # for CI testing purposes, path to test_events.json was changed to tests/test_events.json, so to run tests locally
 # you need to change it back to src/tests/test_events.json, or run command from src directory:
 
@@ -106,7 +106,7 @@ def test_should_message_be_processed_with_ParsingEventError_handling(message_sho
     almost_default_rules.insert(0, message_should_be_processed_with_incorrect_rule_test_case["in"]["incorrect_rule"])
     result = should_message_be_processed(
         event=message_should_be_processed_with_incorrect_rule_test_case["in"]["event"],
-        rules=almost_default_rules,  # type: ignore[arg-type]  # noqa: PGH003
+        rules=almost_default_rules,  # type: ignore[arg-type]
         ignore_rules=[],
     )
 

@@ -27,7 +27,7 @@ from rule_evaluator import (
     evaluate_rule,
 )
 
-# ruff: noqa: ANN201, ANN001, E501
+# ruff: noqa: ANN201, ANN001
 
 FLAT_EVENT = {
     "eventName": "ConsoleLogin",
@@ -208,7 +208,7 @@ def test_malformed_rule_raises_syntaxerror():
 )
 def test_result_matches_builtin_eval_for_safe_expressions(expression):
     """The restricted evaluator must not change the value a rule produces."""
-    expected = eval(expression, {"__builtins__": {"len": len}}, {"event": FLAT_EVENT})  # noqa: PGH001, S307
+    expected = eval(expression, {"__builtins__": {"len": len}}, {"event": FLAT_EVENT})
     actual = evaluate_rule(expression, FLAT_EVENT)
     assert actual == expected
     assert type(actual) is type(expected)

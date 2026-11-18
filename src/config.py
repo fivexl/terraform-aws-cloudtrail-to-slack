@@ -54,15 +54,15 @@ def get_slack_config() -> Union[SlackWebhookConfig, SlackAppConfig]:
 
 
 class Config:
-    def __init__(self):  # noqa: ANN101 ANN204
+    def __init__(self):  # noqa: ANN204
 
         self.default_sns_topic_arn: str | None = os.environ.get("DEFAULT_SNS_TOPIC_ARN")
         self.sns_configuration: List[Dict] = get_list_from_env_var("SNS_CONFIGURATION")
 
         self.rule_evaluation_errors_to_slack: bool = self.get_bool_from_env_var("RULE_EVALUATION_ERRORS_TO_SLACK")
         self.rules_separator: str = os.environ.get("RULES_SEPARATOR", ",")
-        self.user_rules: List[str] = self.parse_rules_from_string(os.environ.get("RULES"), self.rules_separator)  # noqa: E501
-        self.ignore_rules: List[str] = self.parse_rules_from_string(os.environ.get("IGNORE_RULES"), self.rules_separator)  # noqa: E501
+        self.user_rules: List[str] = self.parse_rules_from_string(os.environ.get("RULES"), self.rules_separator)
+        self.ignore_rules: List[str] = self.parse_rules_from_string(os.environ.get("IGNORE_RULES"), self.rules_separator)
         self.use_default_rules: bool = self.get_bool_from_env_var("USE_DEFAULT_RULES")
         self.events_to_track: str | None = os.environ.get("EVENTS_TO_TRACK")
 
@@ -95,7 +95,7 @@ class Config:
 
 
 class JsonFormatter(logging.Formatter):
-    def format(self, record):  # noqa: ANN001, ANN201, ANN101
+    def format(self, record):  # noqa: ANN001, ANN201
         log_entry = {
             "level": record.levelname,
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f"),

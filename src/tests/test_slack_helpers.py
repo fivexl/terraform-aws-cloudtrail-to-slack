@@ -12,7 +12,7 @@ from slack_helpers import (
     webhook_post_message,
 )
 
-# ruff: noqa: ANN201, ANN001, E501
+# ruff: noqa: ANN201, ANN001
 
 MESSAGE = {"blocks": [{"type": "divider"}]}
 

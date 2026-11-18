@@ -95,7 +95,9 @@ select = [
   # comprehensions
   "C4",
   # pygrep-hooks
-  "PGH"
+  "PGH",
+  # unused noqa comments
+  "RUF100",
 ]
 ignore = [
   # Allow imports inside test functions (common pytest pattern)

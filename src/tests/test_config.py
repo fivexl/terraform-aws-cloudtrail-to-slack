@@ -6,7 +6,7 @@ from config import Config, SlackAppConfig, SlackWebhookConfig, get_slack_config
 from rule_evaluator import evaluate_rule
 from rules import default_rules
 
-# ruff: noqa: ANN201, ANN001, E501
+# ruff: noqa: ANN201, ANN001
 
 
 # Terraform passes booleans to the Lambda as the strings "true" and "false".

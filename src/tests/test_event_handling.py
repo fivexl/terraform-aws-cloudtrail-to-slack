@@ -12,7 +12,7 @@ from botocore.exceptions import ClientError
 import main
 from config import SlackAppConfig, SlackWebhookConfig
 
-# ruff: noqa: ANN201, ANN001, E501
+# ruff: noqa: ANN201, ANN001
 
 HOOK_URL = "https://hooks.slack.com/services/T/B/DEFAULT"
 TOPIC = "arn:aws:sns:us-east-1:000000000000:events"
@@ -36,7 +36,7 @@ class FakeS3:
     def __init__(self, objects):  # noqa: ANN204
         self.objects = objects
 
-    def get_object(self, Bucket, Key):  # noqa: ANN001, ANN201, N803
+    def get_object(self, Bucket, Key):
         if (Bucket, Key) not in self.objects:
             raise ClientError({"Error": {"Code": "NoSuchKey", "Message": "The specified key does not exist."}}, "GetObject")
         return {"Body": io.BytesIO(gzip.compress(json.dumps(self.objects[(Bucket, Key)]).encode()))}

@@ -7,7 +7,7 @@ import pytest
 
 from dynamodb import get_thread_ts_from_dynamodb, hash_user_identity_and_event_name, put_event_to_dynamodb
 
-# ruff: noqa: ANN201, ANN001, E501
+# ruff: noqa: ANN201, ANN001
 
 TABLE = "threads"
 IDENTITY = {

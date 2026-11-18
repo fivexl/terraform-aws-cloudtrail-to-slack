@@ -41,7 +41,7 @@ def hash_user_identity_and_event_name(
 def put_event_to_dynamodb(event: dict, thread_ts: str, dynamodb_client, cfg: Config) -> dict | None:  # noqa: ANN001,
     hash_value = hash_user_identity_and_event_name(event)
     if not hash_value:
-        logger.info({"No hash value returned from hash_user_identity_and_event_name, not putting event to DynamoDB"})  # noqa: E501
+        logger.info({"No hash value returned from hash_user_identity_and_event_name, not putting event to DynamoDB"})
         return None
 
     logger.debug({"Putting event to DynamoDB": {"event": event}})
