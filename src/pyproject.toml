@@ -5,6 +5,7 @@ version = "0.0.0"
 description = "Parse AWS CloudTrail events and send alerts to Slack for events that match pre-configured rules"
 requires-python = ">=3.14"
 dependencies = [
+    "python-dateutil>=2.9.0",
     "slack-sdk>=3.21.3,<4",
 ]
 

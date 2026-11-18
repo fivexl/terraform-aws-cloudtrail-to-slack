@@ -342,8 +342,8 @@ Use `lambda_function_arn` output to get the Lambda destination.
 
 # Lambda deployment: pre-built image or local build
 
-By default the module deploys a **pre-built Lambda container image** that FivexL publishes to a
-private ECR repository and replicates to all regions (`222341826240`, repository
+By default the module deploys a **pre-built Lambda container image** that FivexL publishes to an
+ECR repository that any AWS account can pull from (`222341826240`, repository
 `fivexl-opensource/terraform-aws-cloudtrail-to-slack`). Terraform no longer builds anything on your machine
 or in your CI, so there is no Docker, `pip` or build step during `terraform plan` / `apply`.
 The image tag defaults to the module release (`ecr_repo_tag`), so upgrading the module upgrades the image.
@@ -358,8 +358,10 @@ The image tag defaults to the module release (`ecr_repo_tag`), so upgrading the 
 
 ### Requirements for the pre-built image
 
-* **Region:** the image is replicated to the regions FivexL runs in. The Lambda function must be in a region that has the image.
-  If the pull fails with "Source image ... is not valid" or an access error, use `use_pre_created_image = false`
+* **Region:** Lambda pulls the image from the function's own region, so the function must be in one of these regions:
+  `us-east-1`, `us-east-2`, `us-west-1`, `us-west-2`, `ca-central-1`, `sa-east-1`, `eu-central-1`, `eu-west-1`,
+  `eu-west-2`, `eu-west-3`, `eu-north-1`, `ap-south-1`, `ap-northeast-1`, `ap-northeast-2`, `ap-northeast-3`,
+  `ap-southeast-1`, `ap-southeast-2`. In any other region, or if the pull fails with "Source image ... is not valid" or an access error, use `use_pre_created_image = false`
   or mirror the image into your own account (set `ecr_owner_account_id` and `ecr_repo_name`).
 * **Permissions:** Lambda pulls the image from the ECR repository in the owner account. The repository policy there must allow it,
   and the identity that runs `terraform apply` needs `ecr:BatchGetImage` and `ecr:GetDownloadUrlForLayer` on that repository
@@ -382,6 +384,35 @@ What else changes in the same apply:
   subscription is destroyed and recreated, so events published to the topic during the apply are not delivered.
   Check that events still arrive after the apply.
 * The runtime dependency `slack-sdk` is updated from 3.34.0 to 3.47.0.
+* `rule_evaluation_errors_to_slack = false` now works. Before 5.0.0 any value, `false` included, sent rule evaluation
+  errors to Slack.
+
+Breaking changes to apply in your configuration before you upgrade:
+
+| 4.x | 5.0.0 |
+| --- | --- |
+| `configuration` | `slack_webhook_configuration` (same type) |
+| `enable_eventbridge_notificaitons` | `enable_eventbridge_notifications` |
+| Terraform `>= 0.13.1`, AWS provider `>= 4.8` | Terraform `>= 1.5.7`, AWS provider `>= 6.28` |
+
+Terraform rejects the old variable names with "Unsupported argument", so rename them in the module block:
+
+```hcl
+module "cloudtrail_to_slack" {
+  source  = "fivexl/cloudtrail-to-slack/aws"
+  version = "5.0.0"
+
+  # was: configuration = [...]
+  slack_webhook_configuration = [
+    { accounts = ["111111111111"], slack_hook_url = "https://hooks.slack.com/services/..." },
+  ]
+
+  # was: enable_eventbridge_notificaitons = true
+  enable_eventbridge_notifications = true
+}
+```
+
+The new version floors are not new in practice: 4.5.1 already needed them through the Lambda module it uses.
 
 To keep the previous behaviour, set `use_pre_created_image = false`. The zip build still honours
 `lambda_build_in_docker`. The Lambda permissions are recreated and the function code is updated in this case too,
@@ -410,6 +441,9 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 3. Test the module in a sandbox with `ecr_repo_tag` set to that SHA.
 4. Publish the GitHub Release (tag `X.Y.Z`). The workflow pushes the image tagged `X.Y.Z`.
 5. Keep the time between the merge and the release short: until the release image exists, the default tag does not exist in ECR.
+6. Bump the registry `version` in `examples/slack_*_configuration/main.tf` to the release, and for 5.0.0
+   rename `configuration` to `slack_webhook_configuration` in the webhook example. CI validates the examples against
+   the registry, so this can only happen once the release is published.
 
 # Terraform specs
 
@@ -418,8 +452,8 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 
 | Name | Version |
 | ---- | ------- |
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 0.13.1 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 4.8 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5.7 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 6.28 |
 | <a name="requirement_external"></a> [external](#requirement\_external) | >= 1.0 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 1.0 |
 | <a name="requirement_null"></a> [null](#requirement\_null) | >= 2.0 |
@@ -428,7 +462,7 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 
 | Name | Version |
 | ---- | ------- |
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 4.8 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 6.28 |
 
 ## Modules
 
@@ -463,19 +497,18 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 | <a name="input_aws_sns_topic_subscriptions"></a> [aws\_sns\_topic\_subscriptions](#input\_aws\_sns\_topic\_subscriptions) | Map of endpoints to protocols for SNS topic subscriptions. If not set, sns notifications will not be sent. | `map(string)` | `{}` | no |
 | <a name="input_cloudtrail_logs_kms_key_id"></a> [cloudtrail\_logs\_kms\_key\_id](#input\_cloudtrail\_logs\_kms\_key\_id) | Alias, key id or key arn of the KMS Key that used for CloudTrail events | `string` | `""` | no |
 | <a name="input_cloudtrail_logs_s3_bucket_name"></a> [cloudtrail\_logs\_s3\_bucket\_name](#input\_cloudtrail\_logs\_s3\_bucket\_name) | Name of the CloudWatch log s3 bucket that contains CloudTrail events | `string` | n/a | yes |
-| <a name="input_configuration"></a> [configuration](#input\_configuration) | Allows the configuration of the Slack webhook URL per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization. | <pre>list(object({<br/>    accounts       = list(string)<br/>    slack_hook_url = string<br/>  }))</pre> | `null` | no |
 | <a name="input_create_bucket_notification"></a> [create\_bucket\_notification](#input\_create\_bucket\_notification) | Whether to create S3 bucket notification for CloudTrail logs | `bool` | `true` | no |
 | <a name="input_create_s3_sns_fanout_topic"></a> [create\_s3\_sns\_fanout\_topic](#input\_create\_s3\_sns\_fanout\_topic) | Whether to create SNS topic for S3 fan-out. Only used when enable\_s3\_sns\_fanout=true. If false, you must provide s3\_sns\_fanout\_topic\_arn. | `bool` | `true` | no |
 | <a name="input_dead_letter_target_arn"></a> [dead\_letter\_target\_arn](#input\_dead\_letter\_target\_arn) | The ARN of an SNS topic or SQS queue to notify when an invocation fails. | `string` | `null` | no |
-| <a name="input_default_slack_channel_id"></a> [default\_slack\_channel\_id](#input\_default\_slack\_channel\_id) | The Slack channel ID to be used if the AWS account ID does not match any account ID in the configuration variable. | `string` | `null` | no |
-| <a name="input_default_slack_hook_url"></a> [default\_slack\_hook\_url](#input\_default\_slack\_hook\_url) | The Slack incoming webhook URL to be used if the AWS account ID does not match any account ID in the configuration variable. | `string` | `null` | no |
+| <a name="input_default_slack_channel_id"></a> [default\_slack\_channel\_id](#input\_default\_slack\_channel\_id) | The Slack channel ID to be used if the AWS account ID does not match any account ID in the slack\_app\_configuration variable. | `string` | `null` | no |
+| <a name="input_default_slack_hook_url"></a> [default\_slack\_hook\_url](#input\_default\_slack\_hook\_url) | The Slack incoming webhook URL to be used if the AWS account ID does not match any account ID in the slack\_webhook\_configuration variable. | `string` | `null` | no |
 | <a name="input_default_sns_topic_arn"></a> [default\_sns\_topic\_arn](#input\_default\_sns\_topic\_arn) | Default topic for all notifications. If not set, sns notifications will not be sent. | `string` | `null` | no |
 | <a name="input_dynamodb_table_name"></a> [dynamodb\_table\_name](#input\_dynamodb\_table\_name) | Name of the dynamodb table, it would not be created if slack\_bot\_token is not set. | `string` | `"fivexl-cloudtrail-to-slack-table"` | no |
 | <a name="input_dynamodb_time_to_live"></a> [dynamodb\_time\_to\_live](#input\_dynamodb\_time\_to\_live) | How long to keep cloudtrail events in dynamodb table, for collecting similar events in thread of one message | `number` | `900` | no |
 | <a name="input_ecr_owner_account_id"></a> [ecr\_owner\_account\_id](#input\_ecr\_owner\_account\_id) | AWS account ID that owns the ECR repository with the pre-built image. Only used when use\_pre\_created\_image is true. | `string` | `"222341826240"` | no |
 | <a name="input_ecr_repo_name"></a> [ecr\_repo\_name](#input\_ecr\_repo\_name) | Name of the ECR repository with the pre-built image. Only used when use\_pre\_created\_image is true. | `string` | `"fivexl-opensource/terraform-aws-cloudtrail-to-slack"` | no |
 | <a name="input_ecr_repo_tag"></a> [ecr\_repo\_tag](#input\_ecr\_repo\_tag) | Tag of the pre-built image to deploy. The default matches the module release, so upgrading the module upgrades the image. Only used when use\_pre\_created\_image is true. | `string` | `"5.0.0"` | no |
-| <a name="input_enable_eventbridge_notificaitons"></a> [enable\_eventbridge\_notificaitons](#input\_enable\_eventbridge\_notificaitons) | Whether to enable EventBridge notifications for S3 bucket | `bool` | `false` | no |
+| <a name="input_enable_eventbridge_notifications"></a> [enable\_eventbridge\_notifications](#input\_enable\_eventbridge\_notifications) | Whether to enable EventBridge notifications for S3 bucket | `bool` | `false` | no |
 | <a name="input_enable_s3_sns_fanout"></a> [enable\_s3\_sns\_fanout](#input\_enable\_s3\_sns\_fanout) | Enable SNS fan-out pattern for S3 notifications (allows multiple Lambda consumers). When true, S3 sends events to SNS which fans out to subscribers. Note: Lambda endpoints do NOT support raw\_message\_delivery, so SNS messages are automatically unwrapped by the Lambda code. | `bool` | `false` | no |
 | <a name="input_events_to_track"></a> [events\_to\_track](#input\_events\_to\_track) | Comma-separated list events to track and report | `string` | `""` | no |
 | <a name="input_function_name"></a> [function\_name](#input\_function\_name) | Lambda function name | `string` | `"fivexl-cloudtrail-to-slack"` | no |
@@ -497,6 +530,7 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 | <a name="input_s3_sns_fanout_topic_name"></a> [s3\_sns\_fanout\_topic\_name](#input\_s3\_sns\_fanout\_topic\_name) | Name of SNS topic to create for S3 fan-out. Only used when create\_s3\_sns\_fanout\_topic=true. | `string` | `"cloudtrail-s3-notifications"` | no |
 | <a name="input_slack_app_configuration"></a> [slack\_app\_configuration](#input\_slack\_app\_configuration) | Allows the configuration of the Slack app per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization. | <pre>list(object({<br/>    accounts         = list(string)<br/>    slack_channel_id = string<br/>  }))</pre> | `null` | no |
 | <a name="input_slack_bot_token"></a> [slack\_bot\_token](#input\_slack\_bot\_token) | The Slack bot token used for sending messages to Slack. | `string` | `null` | no |
+| <a name="input_slack_webhook_configuration"></a> [slack\_webhook\_configuration](#input\_slack\_webhook\_configuration) | Allows the configuration of the Slack webhook URL per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization. | <pre>list(object({<br/>    accounts       = list(string)<br/>    slack_hook_url = string<br/>  }))</pre> | `null` | no |
 | <a name="input_sns_configuration"></a> [sns\_configuration](#input\_sns\_configuration) | Allows the configuration of the SNS topic per account(s). | <pre>list(object({<br/>    accounts      = list(string)<br/>    sns_topic_arn = string<br/>  }))</pre> | `null` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags to attach to resources | `map(string)` | `{}` | no |
 | <a name="input_use_default_rules"></a> [use\_default\_rules](#input\_use\_default\_rules) | Should default rules be used | `bool` | `true` | no |

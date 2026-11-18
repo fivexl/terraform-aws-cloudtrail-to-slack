@@ -3,7 +3,7 @@ import os
 import json
 from rules import default_rules
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass
 
 
@@ -58,7 +58,7 @@ class Config:
         raw_sns_configuration: str = os.environ.get("SNS_CONFIGURATION", "")
         self.sns_configuration: List[Dict] = json.loads(raw_sns_configuration) if raw_sns_configuration else []
 
-        self.rule_evaluation_errors_to_slack: bool = os.environ.get("RULE_EVALUATION_ERRORS_TO_SLACK")  # type: ignore # noqa: PGH003, E501
+        self.rule_evaluation_errors_to_slack: bool = self.get_bool_from_env_var("RULE_EVALUATION_ERRORS_TO_SLACK")
         self.rules_separator: str = os.environ.get("RULES_SEPARATOR", ",")
         self.user_rules: List[str] = self.parse_rules_from_string(os.environ.get("RULES"), self.rules_separator)  # noqa: E501
         self.ignore_rules: List[str] = self.parse_rules_from_string(os.environ.get("IGNORE_RULES"), self.rules_separator)  # noqa: E501
@@ -97,7 +97,7 @@ class JsonFormatter(logging.Formatter):
     def format(self, record):  # noqa: ANN001, ANN201, ANN101
         log_entry = {
             "level": record.levelname,
-            "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"),
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f"),
         }
 
         if isinstance(record.msg, dict):

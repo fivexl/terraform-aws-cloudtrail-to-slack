@@ -30,7 +30,7 @@ jobs:
         run: pip3 install uv==0.12.3
 
       - name: Install pre-commit
-        run: pip3 install pre-commit
+        run: pip3 install pre-commit==4.7.0
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4
@@ -58,6 +58,8 @@ jobs:
 
       - name: Install Trivy
         uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.76.2
 
       - name: Run tests
         run: bash test.sh

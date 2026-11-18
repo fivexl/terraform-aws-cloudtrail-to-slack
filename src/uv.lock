@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.14"
 
 [[package]]
@@ -239,6 +239,7 @@ name = "terraform-aws-cloudtrail-to-slack"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "python-dateutil" },
     { name = "slack-sdk" },
 ]
 
@@ -253,7 +254,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "slack-sdk", specifier = ">=3.21.3,<4" }]
+requires-dist = [
+    { name = "python-dateutil", specifier = ">=2.9.0" },
+    { name = "slack-sdk", specifier = ">=3.21.3,<4" },
+]
 
 [package.metadata.requires-dev]
 dev = [

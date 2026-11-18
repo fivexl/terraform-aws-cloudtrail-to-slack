@@ -6,7 +6,7 @@
 # -------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------
 # Slack Webhook URL configuration:
-variable "configuration" {
+variable "slack_webhook_configuration" {
   description = "Allows the configuration of the Slack webhook URL per account(s). This enables the separation of events from different accounts into different channels, which is useful in the context of an AWS organization."
   type = list(object({
     accounts       = list(string)
@@ -16,7 +16,7 @@ variable "configuration" {
 }
 
 variable "default_slack_hook_url" {
-  description = "The Slack incoming webhook URL to be used if the AWS account ID does not match any account ID in the configuration variable."
+  description = "The Slack incoming webhook URL to be used if the AWS account ID does not match any account ID in the slack_webhook_configuration variable."
   type        = string
   default     = null
 }
@@ -41,7 +41,7 @@ variable "slack_app_configuration" {
 }
 
 variable "default_slack_channel_id" {
-  description = "The Slack channel ID to be used if the AWS account ID does not match any account ID in the configuration variable."
+  description = "The Slack channel ID to be used if the AWS account ID does not match any account ID in the slack_app_configuration variable."
   type        = string
   default     = null
 }
@@ -263,7 +263,7 @@ variable "create_bucket_notification" {
   type        = bool
 }
 
-variable "enable_eventbridge_notificaitons" {
+variable "enable_eventbridge_notifications" {
   description = "Whether to enable EventBridge notifications for S3 bucket"
   default     = false
   type        = bool
