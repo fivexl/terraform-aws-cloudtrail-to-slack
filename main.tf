@@ -15,7 +15,7 @@ module "lambda" {
 
   # Zip-only settings. They are null for an image: the handler and runtime are baked into the image.
   handler = var.use_pre_created_image ? null : "main.lambda_handler"
-  runtime = var.use_pre_created_image ? null : "python3.14"
+  runtime = var.use_pre_created_image ? null : "python3.15"
 
   source_path = var.use_pre_created_image ? null : [
     {
@@ -42,7 +42,7 @@ module "lambda" {
     }
   ]
 
-  docker_image                 = var.use_pre_created_image ? null : "lambda/python:3.14"
+  docker_image                 = var.use_pre_created_image ? null : "lambda/python:3.15"
   docker_file                  = var.use_pre_created_image ? null : "${path.module}/src/docker/Dockerfile"
   recreate_missing_package     = var.use_pre_created_image ? null : var.lambda_recreate_missing_package
   build_in_docker              = var.use_pre_created_image ? false : var.lambda_build_in_docker
