@@ -1,1 +1,1 @@
-FROM public.ecr.aws/lambda/python:3.14@sha256:dcff319fed89f5723f05daea660dff273de1a7b6736e7ad70f837ee3705ef754
+FROM public.ecr.aws/lambda/python:3.15@sha256:14e5711c512caa87a1cb28eba1c4381d964ed1faf7206f16ed05c7ef9692cac4

@@ -1,10 +1,10 @@
 # Lambda container image for cloudtrail-to-slack.
 # Build from the repository root:
 #   docker build -f src/docker/Dockerfile.image .
-FROM ghcr.io/astral-sh/uv:0.13.7@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.9@sha256:d3b601f0c7b118bc1753febf7c41cc80981df678445e0254284eecf84db79a7d AS uv
 
 # Stage 1: install the runtime dependencies into the Lambda task root
-FROM public.ecr.aws/lambda/python:3.14@sha256:dcff319fed89f5723f05daea660dff273de1a7b6736e7ad70f837ee3705ef754 AS builder
+FROM public.ecr.aws/lambda/python:3.15@sha256:14e5711c512caa87a1cb28eba1c4381d964ed1faf7206f16ed05c7ef9692cac4 AS builder
 
 # Compile bytecode for faster cold starts
 ENV UV_COMPILE_BYTECODE=1
@@ -24,7 +24,7 @@ RUN --mount=from=uv,source=/uv,target=/bin/uv \
     uv pip install --python-platform linux --target "${LAMBDA_TASK_ROOT}" -r requirements.txt
 
 # Stage 2: final image
-FROM public.ecr.aws/lambda/python:3.14@sha256:dcff319fed89f5723f05daea660dff273de1a7b6736e7ad70f837ee3705ef754
+FROM public.ecr.aws/lambda/python:3.15@sha256:14e5711c512caa87a1cb28eba1c4381d964ed1faf7206f16ed05c7ef9692cac4
 
 COPY --from=builder --chown=1000:1000 ${LAMBDA_TASK_ROOT} ${LAMBDA_TASK_ROOT}
 
