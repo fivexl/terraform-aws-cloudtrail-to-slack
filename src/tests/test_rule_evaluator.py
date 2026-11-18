@@ -67,15 +67,19 @@ FLAT_EVENT = {
         ('event["eventName"] in ("Nope",)', False),
         # boolean composition and parentheses
         (
-            'event["eventName"] == "ConsoleLogin" '
-            'and event.get("additionalEventData.MFAUsed", "") != "Yes" '
-            'and "assumed-role/AWSReservedSSO" not in event.get("userIdentity.arn", "")',
+            (
+                'event["eventName"] == "ConsoleLogin" '
+                'and event.get("additionalEventData.MFAUsed", "") != "Yes" '
+                'and "assumed-role/AWSReservedSSO" not in event.get("userIdentity.arn", "")'
+            ),
             True,
         ),
         ('event["eventName"] == "Nope" or event["eventSource"] == "signin.amazonaws.com"', True),
         (
-            '(event.get("errorCode", "").startswith(("AccessDenied"))) '
-            'and (event.get("userIdentity.accountId", "") != "ANONYMOUS_PRINCIPAL")',
+            (
+                '(event.get("errorCode", "").startswith(("AccessDenied"))) '
+                'and (event.get("userIdentity.accountId", "") != "ANONYMOUS_PRINCIPAL")'
+            ),
             True,
         ),
         # allowed builtins, arithmetic, chained comparison, ternary
