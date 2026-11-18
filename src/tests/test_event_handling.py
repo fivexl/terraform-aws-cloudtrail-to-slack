@@ -105,7 +105,6 @@ def test_removed_log_file_is_reported_to_slack(slack_posts):
     assert LOG_KEY in text
 
 
-@pytest.mark.xfail(strict=True, reason="lambda_handler returns on the first digest file instead of skipping it")
 def test_digest_file_does_not_stop_other_records(monkeypatch, slack_posts):
     monkeypatch.setattr(main, "s3_client", FakeS3({("trail-bucket", "AWSLogs/log.json.gz"): {"Records": [CREATE_USER]}}))
     main.lambda_handler(s3_notification("AWSLogs/CloudTrail-Digest/digest.json.gz", "AWSLogs/log.json.gz"), None)

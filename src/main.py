@@ -87,7 +87,7 @@ def lambda_handler(incoming_event: Dict[str, Any], _) -> int:  # noqa: ANN001, P
         for record in s3_notification_event["Records"]:
             event_name: str = record["eventName"]
             if "Digest" in record["s3"]["object"]["key"]:
-                return 200
+                continue
 
             if event_name.startswith("ObjectRemoved"):
                 handle_removed_object_record(
