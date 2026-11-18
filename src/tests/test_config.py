@@ -96,11 +96,27 @@ def slack_env(monkeypatch):
     return monkeypatch
 
 
-@pytest.mark.parametrize("raw_configuration", ["", "[]"])
-def test_webhook_config(slack_env, raw_configuration):
-    slack_env.setenv("HOOK_URL", "https://hooks.slack.com/services/T/B/X")
-    slack_env.setenv("CONFIGURATION", raw_configuration)
-    assert get_slack_config() == SlackWebhookConfig(default_hook_url="https://hooks.slack.com/services/T/B/X", configuration=[])
+# Terraform renders an unset list input as jsonencode(null), the string "null".
+@pytest.mark.parametrize("raw_value", [None, "", "null", "[]"], ids=["unset", "empty", "null", "empty_list"])
+@pytest.mark.parametrize(
+    ("env_var", "read_configuration"),
+    [
+        ("CONFIGURATION", lambda: get_slack_config().configuration),
+        ("SLACK_APP_CONFIGURATION", lambda: get_slack_config().configuration),
+        ("SNS_CONFIGURATION", lambda: Config().sns_configuration),
+    ],
+    ids=["CONFIGURATION", "SLACK_APP_CONFIGURATION", "SNS_CONFIGURATION"],
+)
+def test_unset_list_configuration_is_empty(slack_env, env_var, read_configuration, raw_value):
+    if env_var == "SLACK_APP_CONFIGURATION":
+        slack_env.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+        slack_env.setenv("DEFAULT_SLACK_CHANNEL_ID", "C_DEFAULT")
+    else:
+        slack_env.setenv("HOOK_URL", "https://hooks.slack.com/services/T/B/X")
+    slack_env.delenv(env_var, raising=False)
+    if raw_value is not None:
+        slack_env.setenv(env_var, raw_value)
+    assert read_configuration() == []
 
 
 def test_webhook_config_with_account_routing(slack_env):

@@ -78,11 +78,6 @@ def test_topic_routing_by_account(fake_sns, account_id, topic):
 
 
 # Terraform renders an unset sns_configuration as jsonencode(null), the string "null".
-@pytest.mark.xfail(
-    strict=True,
-    raises=TypeError,
-    reason="SNS_CONFIGURATION='null' parses to None and send_message_to_sns iterates it",
-)
 def test_default_topic_without_sns_configuration(monkeypatch, fake_sns):
     monkeypatch.setenv("DEFAULT_SNS_TOPIC_ARN", DEFAULT_TOPIC)
     monkeypatch.setenv("SNS_CONFIGURATION", "null")
