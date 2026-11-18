@@ -185,9 +185,7 @@ def should_message_be_processed(
     for ignore_rule in ignore_rules:
         try:
             if evaluate_rule(ignore_rule, flat_event) is True:
-                logger.info(
-                    {"Event matched ignore rule and will not be processed": {"ignore_rule": ignore_rule, "flat_event": flat_event}}
-                )  # noqa: E501
+                logger.info({"Event matched ignore rule and will not be processed": {"ignore_rule": ignore_rule, "flat_event": flat_event}})  # noqa: E501
                 return ProcessingResult(should_be_processed=False, errors=errors, is_ignored=True)
         except Exception as e:
             logger.exception({"Event parsing failed": {"error": e, "ignore_rule": ignore_rule, "flat_event": flat_event}})  # noqa: E501

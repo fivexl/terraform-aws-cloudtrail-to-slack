@@ -23,7 +23,6 @@ class SlackAppConfig:
 def get_slack_config() -> Union[SlackWebhookConfig, SlackAppConfig]:
 
     if bot_token := os.environ.get("SLACK_BOT_TOKEN"):
-
         default_channel_id: str | None = os.environ.get("DEFAULT_SLACK_CHANNEL_ID")
         if not default_channel_id:
             raise Exception("Environment variable DEFAULT_SLACK_CHANNEL_ID must be set.")
@@ -38,7 +37,6 @@ def get_slack_config() -> Union[SlackWebhookConfig, SlackAppConfig]:
         )
 
     elif hook_url := os.environ.get("HOOK_URL"):
-
         raw_configuration: str | None = os.environ.get("CONFIGURATION")
         configuration: List[Dict] = json.loads(raw_configuration) if raw_configuration else []
 
