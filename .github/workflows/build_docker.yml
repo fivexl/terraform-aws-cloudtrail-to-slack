@@ -8,10 +8,23 @@ on:
     paths:
       - "src/**"
       - ".github/workflows/build_docker.yml"
+  # Every merge to main that changes the image publishes it under the short SHA, for testing before a release.
+  # Docs-only merges would just add identical images, so the paths filter matches pull_request.
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - ".github/workflows/build_docker.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# A new push to a PR supersedes the previous build; main and release runs each
+# get a unique group so they are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   IMAGE_NAME: cloudtrail-to-slack:build
@@ -92,8 +105,11 @@ jobs:
   push:
     name: Push image to ECR
     needs: build
-    # Only for a published release or a manual run from main. Never on pull requests.
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    # Only for a published release, a push to main or a manual run from main. Never on pull requests.
+    if: >-
+      github.event_name == 'release' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     permissions:
       contents: read

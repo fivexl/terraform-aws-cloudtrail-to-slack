@@ -445,8 +445,9 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
   source of truth; `src/requirements.txt` is the runtime-only export used by the zip build (pre-commit keeps it in sync).
 * `src/docker/Dockerfile.image` builds the Lambda image (Python 3.15, non-root user).
   `src/docker/Dockerfile` is only the build environment for the zip fallback.
-* The `Build and Push Docker Image` workflow builds and tests the image on every pull request, and pushes it to ECR
-  when a GitHub Release is published (tag `X.Y.Z`) or when it is started by hand from `main` (tag = short commit SHA).
+* The `Build and Push Docker Image` workflow builds and tests the image on every pull request that changes `src/`. It
+  pushes the image to ECR when a GitHub Release is published (tag `X.Y.Z`), and tagged with the short commit SHA on
+  every merge to `main` that changes `src/` or when it is started by hand from `main`.
   Pushes use GitHub OIDC with a role that trusts only `main` and tags. The ECR repository has immutable tags, and the
   workflow skips the push when the tag already exists, so a published tag is never overwritten.
   A release fails early if its tag does not match the `ecr_repo_tag` default in `vars.tf`.
@@ -455,7 +456,8 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 ### Release steps
 
 1. Merge the change. The default `ecr_repo_tag` in `vars.tf` must already equal the version you are about to release.
-2. Run the `Build and Push Docker Image` workflow by hand from `main`. It pushes an image tagged with the short SHA.
+2. The merge pushes an image tagged with the short SHA. If the merge did not change `src/`, run the
+   `Build and Push Docker Image` workflow by hand from `main` instead.
 3. Test the module in a sandbox with `ecr_repo_tag` set to that SHA.
 4. Publish the GitHub Release (tag `X.Y.Z`). The workflow pushes the image tagged `X.Y.Z`.
 5. Keep the time between the merge and the release short: until the release image exists, the default tag does not exist in ECR.
