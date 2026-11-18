@@ -33,6 +33,9 @@ releases. Pick the newest version at least 14 days old.
 - Close Dependabot PRs by hand, naming the version you took and where.
 - Pin actions by commit SHA with a `# vX.Y.Z` comment, and Docker images by digest.
 - Keep the ruff hook `rev` equal to the ruff version in `src/uv.lock`.
+- The zip build (`use_pre_created_image = false`) installs from `src/requirements.txt` (`pip_requirements` in
+  `main.tf`), not `uv.lock`, so every lock change needs a re-export. The `uv-export-src` pre-commit hook does it, and
+  CI (`test.sh`) fails while the committed file is stale.
 
 ## Checks
 
