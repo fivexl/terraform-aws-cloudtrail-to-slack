@@ -27,6 +27,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
@@ -72,7 +74,7 @@ jobs:
             -e HOOK_URL=https://example.invalid \
             -e USE_DEFAULT_RULES=true \
             -e AWS_DEFAULT_REGION=eu-central-1 \
-            "${IMAGE_NAME}" -c "import main"
+            "${IMAGE_NAME}" -c "import main; assert callable(main.lambda_handler)"
 
       # The push job publishes exactly this tested image, not a fresh rebuild.
       - name: Save tested image

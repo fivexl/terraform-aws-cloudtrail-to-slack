@@ -364,7 +364,7 @@ The image tag defaults to the module release (`ecr_repo_tag`), so upgrading the 
 * **Permissions:** Lambda pulls the image from the ECR repository in the owner account. The repository policy there must allow it,
   and the identity that runs `terraform apply` needs `ecr:BatchGetImage` and `ecr:GetDownloadUrlForLayer` on that repository
   (a restrictive deployer role or an SCP can block this). The Lambda execution role needs no ECR permissions.
-* **Partitions:** the image host is `<account>.dkr.ecr.<region>.amazonaws.com`. AWS China and GovCloud are not served,
+* **Partitions:** the image host is `<account>.dkr.ecr.<region>.amazonaws.com`. AWS China and GovCloud are not served;
   set `use_pre_created_image = false` there.
 * **Architecture:** the image is built for `x86_64` (the Lambda default).
 
@@ -376,14 +376,16 @@ function is briefly unavailable while it is replaced. Review the plan before you
 
 What else changes in the same apply:
 
-* The Lambda versions and aliases are recreated (published version numbers start again), and any provisioned concurrency
+* The published Lambda versions are recreated (version numbers start again), and any provisioned concurrency
   configured on the function is lost.
-* The Lambda permissions for S3 and SNS are recreated, and the S3 notification or SNS subscription is updated in place.
-  Check that events still arrive after the apply (see the plan before you apply it).
+* The Lambda permissions for S3 and SNS are recreated. The S3 bucket notification is updated in place, but the SNS
+  subscription is destroyed and recreated, so events published to the topic during the apply are not delivered.
+  Check that events still arrive after the apply.
 * The runtime dependency `slack-sdk` is updated from 3.34.0 to 3.47.0.
 
 To keep the previous behaviour, set `use_pre_created_image = false`. The zip build still honours
-`lambda_build_in_docker`.
+`lambda_build_in_docker`. The Lambda permissions are recreated and the function code is updated in this case too,
+because the permissions now reference the function ARN and the zip ships the newer `slack-sdk`.
 
 If you built the zip in Docker only to get Linux dependencies from a non-Linux machine
 (`lambda_build_in_docker = true`), you can remove that setting after the upgrade: the image needs no local build.
