@@ -400,7 +400,7 @@ What else changes in the same apply:
   subscription is destroyed and recreated, so events published to the topic during the apply are not delivered.
   Check that events still arrive after the apply.
 * The Lambda runs on Python 3.15 instead of 3.14.
-* The runtime dependency `slack-sdk` is updated from 3.34.0 to 3.47.0.
+* The runtime dependency `slack-sdk` is updated from 3.34.0 to 3.46.0.
 * `rule_evaluation_errors_to_slack = false` now works. Before 5.0.0 any value, `false` included, sent rule evaluation
   errors to Slack.
 
