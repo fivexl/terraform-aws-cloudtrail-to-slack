@@ -18,6 +18,22 @@ matching image.
 
 The full maintainer steps are in the README, under "Build process (maintainers)".
 
+## Dependency updates
+
+New upstream versions soak for 14 days after they are published before they ship, as a defence against hijacked
+releases. Pick the newest version at least 14 days old.
+
+- Python: `[tool.uv] exclude-newer = "14 days"` in `src/pyproject.toml` makes `uv lock` apply the soak. To take a
+  younger fix for a critical/high advisory, add an `exclude-newer-package` entry set to that version's upload time,
+  and only after you check its PyPI provenance from the project's own publishing workflow. Remove the entry once
+  the version is 14 days old.
+- Dependabot opens security PRs only for `uv`. They skip the cooldown, so treat them as signals: apply the fix by
+  hand once it has soaked. Actions, Terraform modules, Docker images and pre-commit hooks get one grouped monthly PR
+  with a 14-day cooldown; majors open individually.
+- Close Dependabot PRs by hand, naming the version you took and where.
+- Pin actions by commit SHA with a `# vX.Y.Z` comment, and Docker images by digest.
+- Keep the black hook's `additional_dependencies` and the ruff hook `rev` equal to the versions in `src/uv.lock`.
+
 ## Checks
 
 Run `bash test.sh` before pushing. It runs the unit tests and pre-commit, which also regenerates
