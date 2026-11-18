@@ -202,7 +202,9 @@ def should_message_be_processed(
             logger.exception({"Event parsing failed": {"error": e, "rule": rule, "flat_event": flat_event}})
             errors.append({"error": e, "rule": rule})
 
-    logger.info({"Event did not match any rules and will not be processed": {"event": event_name, "user": event.get("userIdentity", "N/A")}})  # noqa: E501
+    logger.info(
+        {"Event did not match any rules and will not be processed": {"event": event_name, "user": event.get("userIdentity", "N/A")}}
+    )  # noqa: E501
     return ProcessingResult(False, errors)
 
 
