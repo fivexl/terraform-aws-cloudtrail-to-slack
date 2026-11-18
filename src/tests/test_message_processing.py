@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from main import ProcessingResult, should_message_be_processed
+from main import ProcessingResult, flatten_json, should_message_be_processed
 from rules import default_rules
 
 # ruff: noqa: ANN201, ANN001, E501
@@ -118,3 +118,77 @@ def test_should_message_be_processed_with_ParsingEventError_handling(message_sho
         message_should_be_processed_with_incorrect_rule_test_case["out"]["result"].errors[0]["error"]
     )
     assert result.errors[0]["rule"] == message_should_be_processed_with_incorrect_rule_test_case["out"]["result"].errors[0]["rule"]
+
+
+# Events close to a default rule that the rule must not match. Positive cases are in test_events.json.
+@pytest.mark.parametrize(
+    "event",
+    [
+        {
+            "eventName": "ConsoleLogin",
+            "eventSource": "signin.amazonaws.com",
+            "additionalEventData": {"MFAUsed": "Yes"},
+            "userIdentity": {"arn": "arn:aws:iam::111111111111:user/alice"},
+        },
+        {
+            "eventName": "ConsoleLogin",
+            "eventSource": "signin.amazonaws.com",
+            "additionalEventData": {"MFAUsed": "No"},
+            "userIdentity": {"arn": "arn:aws:sts::111111111111:assumed-role/AWSReservedSSO_Admin_0123456789abcdef/alice"},
+        },
+        {
+            "eventName": "GetObject",
+            "eventSource": "s3.amazonaws.com",
+            "errorCode": "AccessDenied",
+            "userIdentity": {"accountId": "ANONYMOUS_PRINCIPAL"},
+        },
+        *(
+            {"eventName": name, "eventSource": "iam.amazonaws.com", "userIdentity": {"type": "Root"}}
+            for name in ("GetUser", "ListUsers", "DescribeInstances", "HeadBucket")
+        ),
+        {
+            "eventName": "UpdateFunctionCode20150331v2",
+            "eventSource": "lambda.amazonaws.com",
+            "responseElements": {"functionName": "some-other-function"},
+        },
+        {"eventName": "StartLogging", "eventSource": "cloudtrail.amazonaws.com"},
+    ],
+    ids=[
+        "console_login_with_mfa",
+        "sso_login",
+        "anonymous_access_denied",
+        "root_get",
+        "root_list",
+        "root_describe",
+        "root_head",
+        "other_lambda_updated",
+        "cloudtrail_start_logging",
+    ],
+)
+def test_default_rules_do_not_match(event) -> None:
+    assert should_message_be_processed(event=event, rules=default_rules, ignore_rules=[]) == ProcessingResult(False, [])
+
+
+def test_non_matching_ignore_rule_does_not_suppress() -> None:
+    event = {"eventName": "StopLogging", "eventSource": "cloudtrail.amazonaws.com"}
+    ignore_rules = ['event.get("userIdentity.arn", "").endswith("/automation")']
+    assert should_message_be_processed(event=event, rules=default_rules, ignore_rules=ignore_rules) == ProcessingResult(True, [])
+
+
+# Rules address nested fields by dotted path, with list items by index.
+def test_flatten_json_paths() -> None:
+    event = {
+        "eventName": "RunInstances",
+        "errorCode": None,
+        "userIdentity": {"sessionContext": {"sessionIssuer": {"type": "Role"}}},
+        "requestParameters": {"tagSpecificationSet": {"items": [{"tags": [{"key": "env", "value": "prod"}]}, {"count": 2}]}},
+        "responseElements": {},
+    }
+    assert flatten_json(event) == {
+        "eventName": "RunInstances",
+        "errorCode": None,
+        "userIdentity.sessionContext.sessionIssuer.type": "Role",
+        "requestParameters.tagSpecificationSet.items.0.tags.0.key": "env",
+        "requestParameters.tagSpecificationSet.items.0.tags.0.value": "prod",
+        "requestParameters.tagSpecificationSet.items.1.count": 2,
+    }
