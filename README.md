@@ -399,7 +399,8 @@ What else changes in the same apply:
 * The Lambda permissions for S3 and SNS are recreated. The S3 bucket notification is updated in place, but the SNS
   subscription is destroyed and recreated, so events published to the topic during the apply are not delivered.
   Check that events still arrive after the apply.
-* The runtime dependency `slack-sdk` is updated from 3.34.0 to 3.47.0.
+* The Lambda runs on Python 3.15 instead of 3.14.
+* The runtime dependency `slack-sdk` is updated from 3.34.0 to 3.46.0.
 * `rule_evaluation_errors_to_slack = false` now works. Before 5.0.0 any value, `false` included, sent rule evaluation
   errors to Slack.
 
@@ -409,7 +410,7 @@ Breaking changes to apply in your configuration before you upgrade:
 | --- | --- |
 | `configuration` | `slack_webhook_configuration` (same type) |
 | `enable_eventbridge_notificaitons` | `enable_eventbridge_notifications` |
-| Terraform `>= 0.13.1`, AWS provider `>= 4.8` | Terraform `>= 1.5.7`, AWS provider `>= 6.28` |
+| Terraform `>= 0.13.1`, AWS provider `>= 4.8` | Terraform `>= 1.5.7`, AWS provider `>= 6.58` |
 
 Terraform rejects the old variable names with "Unsupported argument", so rename them in the module block:
 
@@ -428,7 +429,8 @@ module "cloudtrail_to_slack" {
 }
 ```
 
-The new version floors are not new in practice: 4.5.1 already needed them through the Lambda module it uses.
+Terraform 1.5.7 and AWS provider 6.28 are not new in practice: 4.5.1 already needed them through the Lambda module
+it uses. AWS provider 6.58 is the first version that accepts the `python3.15` Lambda runtime.
 
 To keep the previous behaviour, set `use_pre_created_image = false`. The zip build still honours
 `lambda_build_in_docker`. The Lambda permissions are recreated and the function code is updated in this case too,
@@ -441,7 +443,7 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 
 * Python dependencies are managed with [uv](https://docs.astral.sh/uv/). `src/pyproject.toml` and `src/uv.lock` are the
   source of truth; `src/requirements.txt` is the runtime-only export used by the zip build (pre-commit keeps it in sync).
-* `src/docker/Dockerfile.image` builds the Lambda image (Python 3.14, non-root user).
+* `src/docker/Dockerfile.image` builds the Lambda image (Python 3.15, non-root user).
   `src/docker/Dockerfile` is only the build environment for the zip fallback.
 * The `Build and Push Docker Image` workflow builds and tests the image on every pull request, and pushes it to ECR
   when a GitHub Release is published (tag `X.Y.Z`) or when it is started by hand from `main` (tag = short commit SHA).
@@ -469,7 +471,7 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 | Name | Version |
 | ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5.7 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 6.28 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 6.58 |
 | <a name="requirement_external"></a> [external](#requirement\_external) | >= 1.0 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 1.0 |
 | <a name="requirement_null"></a> [null](#requirement\_null) | >= 2.0 |
@@ -478,13 +480,13 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 
 | Name | Version |
 | ---- | ------- |
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 6.28 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 6.58 |
 
 ## Modules
 
 | Name | Source | Version |
 | ---- | ------ | ------- |
-| <a name="module_cloudtrail_to_slack_dynamodb_table"></a> [cloudtrail\_to\_slack\_dynamodb\_table](#module\_cloudtrail\_to\_slack\_dynamodb\_table) | terraform-aws-modules/dynamodb-table/aws | 3.3.0 |
+| <a name="module_cloudtrail_to_slack_dynamodb_table"></a> [cloudtrail\_to\_slack\_dynamodb\_table](#module\_cloudtrail\_to\_slack\_dynamodb\_table) | terraform-aws-modules/dynamodb-table/aws | 5.5.2 |
 | <a name="module_lambda"></a> [lambda](#module\_lambda) | terraform-aws-modules/lambda/aws | 8.13.0 |
 
 ## Resources

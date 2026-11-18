@@ -3,7 +3,7 @@ name = "terraform-aws-cloudtrail-to-slack"
 # Placeholder required by uv. The real version is the git tag / GitHub Release.
 version = "0.0.0"
 description = "Parse AWS CloudTrail events and send alerts to Slack for events that match pre-configured rules"
-requires-python = ">=3.14"
+requires-python = ">=3.15"
 dependencies = [
     "python-dateutil>=2.9.0",
     "slack-sdk>=3.21.3,<4",
@@ -59,8 +59,8 @@ exclude = [
 
 line-length = 140
 
-# Assume Python 3.14.
-target-version = "py314"
+# Assume Python 3.15.
+target-version = "py315"
 
 [tool.ruff.lint]
 select = [
