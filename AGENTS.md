@@ -32,7 +32,7 @@ releases. Pick the newest version at least 14 days old.
   with a 14-day cooldown; majors open individually.
 - Close Dependabot PRs by hand, naming the version you took and where.
 - Pin actions by commit SHA with a `# vX.Y.Z` comment, and Docker images by digest.
-- Keep the black hook's `additional_dependencies` and the ruff hook `rev` equal to the versions in `src/uv.lock`.
+- Keep the ruff hook `rev` equal to the ruff version in `src/uv.lock`.
 
 ## Checks
 

@@ -10,17 +10,6 @@ repos:
 # Python
 -   repo: local
     hooks:
-    # NOTE: we make `black` a local hook because if it's installed from
-    # PyPI (rather than from source) then it'll run twice as fast thanks to mypyc
-    -   id: black
-        name: black
-        description: "Black: The uncompromising Python code formatter"
-        entry: black
-        language: python
-        require_serial: true
-        types_or: [python, pyi]
-        # Keep this version in sync with black in src/uv.lock
-        additional_dependencies: [black==26.10.1]
     # Keeps src/requirements.txt (runtime dependencies, used by the zip build) in sync with uv.lock
     -   id: uv-export-src
         name: uv export src requirements
@@ -33,7 +22,8 @@ repos:
     rev: v0.17.3
     hooks:
     -   id: ruff-check
-        args: [--exit-non-zero-on-fix]
+        args: [--fix, --exit-non-zero-on-fix]
+    -   id: ruff-format
 # Terraform
 -   repo: https://github.com/antonbabenko/pre-commit-terraform
     rev: v1.109.4
