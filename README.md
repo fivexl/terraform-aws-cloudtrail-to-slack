@@ -392,6 +392,29 @@ The image tag defaults to the module release (`ecr_repo_tag`), so upgrading the 
 Terraform **replaces** the function. The function name, IAM role, triggers and settings stay the same, and the
 function is briefly unavailable while it is replaced. Review the plan before you apply it.
 
+### Delete the old function before you apply
+
+Terraform creates the new function before it deletes the old one, and the function name stays the same
+(`function_name`, default `fivexl-cloudtrail-to-slack`). AWS rejects the second function with
+`409 ResourceConflictException`, so a plain `terraform apply` fails. By then Terraform has already removed the S3 or SNS
+invoke permission, so **no alerts are delivered until you finish the upgrade**.
+
+Avoid this by deleting the old function first, then applying. Alerts pause from the delete until the apply finishes,
+usually a few minutes:
+
+```bash
+aws lambda delete-function --function-name "fivexl-cloudtrail-to-slack" --region "<region of the module>"
+terraform apply
+```
+
+Use your own `function_name` if you changed it. Terraform notices the function is gone and creates the image function,
+the permission and the notification. The log group, IAM role, DynamoDB table and secrets are not touched.
+
+If you already ran `terraform apply` and it failed with the 409, run the same two commands: delete the function, then
+apply again.
+
+This step is not needed with `use_pre_created_image = false`, because the function stays a zip package.
+
 What else changes in the same apply:
 
 * The published Lambda versions are recreated (version numbers start again), and any provisioned concurrency
