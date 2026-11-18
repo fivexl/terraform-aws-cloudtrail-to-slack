@@ -18,6 +18,7 @@ repos:
         language: system
         files: ^src/(pyproject\.toml|uv\.lock)$
         pass_filenames: false
+# Keep rev equal to ruff in src/uv.lock
 -   repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.3
     hooks:
