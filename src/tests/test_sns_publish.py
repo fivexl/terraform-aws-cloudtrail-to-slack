@@ -77,9 +77,9 @@ def test_topic_routing_by_account(fake_sns, account_id, topic):
     assert json.loads(published["Message"])["event_id"] == "abc-123"
 
 
-# Terraform renders an unset sns_configuration as jsonencode(null), the string "null".
-def test_default_topic_without_sns_configuration(monkeypatch, fake_sns):
-    monkeypatch.setenv("DEFAULT_SNS_TOPIC_ARN", DEFAULT_TOPIC)
-    monkeypatch.setenv("SNS_CONFIGURATION", "null")
+def test_default_topic_without_sns_configuration(rules_env, fake_sns):
+    rules_env.setenv("RULES", 'event["eventName"] == "DeleteBucket"')
+    rules_env.setenv("DEFAULT_SNS_TOPIC_ARN", DEFAULT_TOPIC)
+    rules_env.setenv("SNS_CONFIGURATION", "null")
     send_message_to_sns(event=EVENT, source_file="f", account_id="111111111111", cfg=Config(), sns_client=fake_sns)
     assert fake_sns.published[0]["TopicArn"] == DEFAULT_TOPIC

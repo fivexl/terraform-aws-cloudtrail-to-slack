@@ -10,32 +10,22 @@ from rules import default_rules
 
 
 # Terraform passes booleans to the Lambda as the strings "true" and "false".
-@pytest.mark.parametrize(("value", "expected"), [("true", True), ("false", False), ("", False)])
-def test_rule_evaluation_errors_to_slack(monkeypatch, value, expected):  # noqa: ANN001, ANN201
-    monkeypatch.setenv("RULE_EVALUATION_ERRORS_TO_SLACK", value)
-    assert Config().rule_evaluation_errors_to_slack is expected
-
-
 @pytest.mark.parametrize(
-    ("value", "expected"), [("true", True), ("True", True), ("1", True), ("false", False), ("0", False), ("yes", False)]
+    ("value", "expected"),
+    [("true", True), ("True", True), ("1", True), ("false", False), ("0", False), ("yes", False), ("", False)],
 )
-def test_boolean_env_vars(monkeypatch, value, expected):
-    monkeypatch.setenv("USE_DEFAULT_RULES", value)
-    monkeypatch.setenv("PUSH_ACCESS_DENIED_CLOUDWATCH_METRICS", value)
-    cfg = Config()
-    assert cfg.use_default_rules is expected
-    assert cfg.push_access_denied_cloudwatch_metrics is expected
-
-
-@pytest.fixture
-def rules_env(monkeypatch):
-    """Start every rules test from 'no rules configured'."""
-    monkeypatch.setenv("USE_DEFAULT_RULES", "false")
-    monkeypatch.setenv("RULES", "")
-    monkeypatch.setenv("IGNORE_RULES", "")
-    monkeypatch.setenv("EVENTS_TO_TRACK", "")
-    monkeypatch.setenv("RULES_SEPARATOR", ",")
-    return monkeypatch
+@pytest.mark.parametrize(
+    ("env_var", "attribute"),
+    [
+        ("RULE_EVALUATION_ERRORS_TO_SLACK", "rule_evaluation_errors_to_slack"),
+        ("USE_DEFAULT_RULES", "use_default_rules"),
+        ("PUSH_ACCESS_DENIED_CLOUDWATCH_METRICS", "push_access_denied_cloudwatch_metrics"),
+    ],
+)
+def test_boolean_env_vars(rules_env, env_var, attribute, value, expected):
+    rules_env.setenv("RULES", 'event["eventName"] == "CreateUser"')
+    rules_env.setenv(env_var, value)
+    assert getattr(Config(), attribute) is expected
 
 
 @pytest.mark.usefixtures("rules_env")
@@ -70,9 +60,10 @@ def test_events_to_track_rule_matches_listed_events(rules_env, event_name, expec
     assert evaluate_rule(rule, {"eventName": event_name}) is expected
 
 
-def test_optional_settings_defaults(monkeypatch):
+def test_optional_settings_defaults(rules_env):
+    rules_env.setenv("RULES", 'event["eventName"] == "CreateUser"')
     for name in ("DEFAULT_SNS_TOPIC_ARN", "SNS_CONFIGURATION", "DYNAMODB_TABLE_NAME", "DYNAMODB_TIME_TO_LIVE"):
-        monkeypatch.delenv(name, raising=False)
+        rules_env.delenv(name, raising=False)
     cfg = Config()
     assert cfg.default_sns_topic_arn is None
     assert cfg.sns_configuration == []
@@ -80,10 +71,11 @@ def test_optional_settings_defaults(monkeypatch):
     assert cfg.dynamodb_time_to_live == 900  # noqa: PLR2004
 
 
-def test_optional_settings_parsed(monkeypatch):
+def test_optional_settings_parsed(rules_env):
+    rules_env.setenv("RULES", 'event["eventName"] == "CreateUser"')
     sns_configuration = [{"accounts": ["111111111111"], "sns_topic_arn": "arn:aws:sns:us-east-1:111111111111:t"}]
-    monkeypatch.setenv("SNS_CONFIGURATION", json.dumps(sns_configuration))
-    monkeypatch.setenv("DYNAMODB_TIME_TO_LIVE", "1800")
+    rules_env.setenv("SNS_CONFIGURATION", json.dumps(sns_configuration))
+    rules_env.setenv("DYNAMODB_TIME_TO_LIVE", "1800")
     cfg = Config()
     assert cfg.sns_configuration == sns_configuration
     assert cfg.dynamodb_time_to_live == 1800  # noqa: PLR2004
@@ -96,9 +88,7 @@ def slack_env(monkeypatch):
     return monkeypatch
 
 
-# Terraform renders an unset list input as jsonencode(null), the string "null".
-@pytest.mark.parametrize("raw_value", [None, "", "null", "[]"], ids=["unset", "empty", "null", "empty_list"])
-@pytest.mark.parametrize(
+LIST_CONFIGURATIONS = pytest.mark.parametrize(
     ("env_var", "read_configuration"),
     [
         ("CONFIGURATION", lambda: get_slack_config().configuration),
@@ -107,16 +97,34 @@ def slack_env(monkeypatch):
     ],
     ids=["CONFIGURATION", "SLACK_APP_CONFIGURATION", "SNS_CONFIGURATION"],
 )
-def test_unset_list_configuration_is_empty(slack_env, env_var, read_configuration, raw_value):
+
+
+def set_list_configuration(env, env_var, raw_value):
+    env.setenv("RULES", 'event["eventName"] == "CreateUser"')
     if env_var == "SLACK_APP_CONFIGURATION":
-        slack_env.setenv("SLACK_BOT_TOKEN", "xoxb-test")
-        slack_env.setenv("DEFAULT_SLACK_CHANNEL_ID", "C_DEFAULT")
+        env.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+        env.setenv("DEFAULT_SLACK_CHANNEL_ID", "C_DEFAULT")
     else:
-        slack_env.setenv("HOOK_URL", "https://hooks.slack.com/services/T/B/X")
-    slack_env.delenv(env_var, raising=False)
+        env.setenv("HOOK_URL", "https://hooks.slack.com/services/T/B/X")
+    env.delenv(env_var, raising=False)
     if raw_value is not None:
-        slack_env.setenv(env_var, raw_value)
+        env.setenv(env_var, raw_value)
+
+
+# Terraform renders an unset list input as jsonencode(null), the string "null".
+@pytest.mark.parametrize("raw_value", [None, "", "null", "[]"], ids=["unset", "empty", "null", "empty_list"])
+@LIST_CONFIGURATIONS
+@pytest.mark.usefixtures("rules_env")
+def test_unset_list_configuration_is_empty(slack_env, env_var, read_configuration, raw_value):
+    set_list_configuration(slack_env, env_var, raw_value)
     assert read_configuration() == []
+
+
+@LIST_CONFIGURATIONS
+@pytest.mark.usefixtures("rules_env")
+def test_other_configuration_values_are_kept(slack_env, env_var, read_configuration):
+    set_list_configuration(slack_env, env_var, "{}")
+    assert read_configuration() == {}
 
 
 def test_webhook_config_with_account_routing(slack_env):

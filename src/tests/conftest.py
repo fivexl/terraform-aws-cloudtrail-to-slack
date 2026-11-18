@@ -1,5 +1,7 @@
-import boto3
+import copy
 import os
+
+import boto3
 
 import pytest
 
@@ -27,12 +29,12 @@ class FakeDynamoDB:
         self.tables: dict[str, dict[str, dict]] = {}
 
     def put_item(self, TableName, Item):  # noqa: ANN001, ANN201, N803
-        self.tables.setdefault(TableName, {})[Item["principal_structure_and_action_hash"]["S"]] = Item
+        self.tables.setdefault(TableName, {})[Item["principal_structure_and_action_hash"]["S"]] = copy.deepcopy(Item)
         return {}
 
     def get_item(self, TableName, Key):  # noqa: ANN001, ANN201, N803
         item = self.tables.get(TableName, {}).get(Key["principal_structure_and_action_hash"]["S"])
-        return {"Item": item} if item else {}
+        return {"Item": copy.deepcopy(item)} if item else {}
 
 
 class FakeSNS:
@@ -42,6 +44,17 @@ class FakeSNS:
     def publish(self, **kwargs):  # noqa: ANN003, ANN201
         self.published.append(kwargs)
         return {"MessageId": str(len(self.published))}
+
+
+@pytest.fixture
+def rules_env(monkeypatch):  # noqa: ANN001, ANN201
+    """Start every rules test from 'no rules configured' instead of the session's placeholder rules."""
+    monkeypatch.setenv("USE_DEFAULT_RULES", "false")
+    monkeypatch.setenv("RULES", "")
+    monkeypatch.setenv("IGNORE_RULES", "")
+    monkeypatch.setenv("EVENTS_TO_TRACK", "")
+    monkeypatch.setenv("RULES_SEPARATOR", ",")
+    return monkeypatch
 
 
 @pytest.fixture

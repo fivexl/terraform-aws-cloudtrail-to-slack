@@ -370,7 +370,7 @@ if __name__ == "__main__":
     os.environ["EVENTS_TO_TRACK"] = ""
     os.environ["LOG_LEVEL"] = ""
     os.environ["DEFAULT_SNS_TOPIC_ARN"] = ""
-    os.environ["SNS_CONFIGURATION"] = '[{""}]'
+    os.environ["SNS_CONFIGURATION"] = "[]"
 
     cfg = Config()
     slack_config = get_slack_config()

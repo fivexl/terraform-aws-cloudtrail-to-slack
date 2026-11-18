@@ -22,8 +22,8 @@ class SlackAppConfig:
 
 def get_list_from_env_var(env_var_name: str) -> List[Dict]:
     # Terraform passes an unset list input as jsonencode(null), the string "null".
-    raw_value = os.environ.get(env_var_name)
-    return json.loads(raw_value or "null") or []
+    value = json.loads(os.environ.get(env_var_name) or "null")
+    return [] if value is None else value
 
 
 def get_slack_config() -> Union[SlackWebhookConfig, SlackAppConfig]:
