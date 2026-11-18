@@ -8,7 +8,7 @@ six==1.17.0 \
     --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274 \
     --hash=sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81
     # via python-dateutil
-slack-sdk==3.47.0 \
-    --hash=sha256:824e91a94a5b72a65531e8db0dd63dc4dc6bbad1a219b19582b48d5661c1c707 \
-    --hash=sha256:8cfab3224d149962ef4313c1430d9ff65b8c3baf09f25988a920858ffa90aaa9
+slack-sdk==3.46.0 \
+    --hash=sha256:25215ca293d2954ed759b87573b4c833cb3f82ebff371355936515c688411dbb \
+    --hash=sha256:6286d89da97ea193c853609131515e6f1b3edf86866d6e5aad0dba9dcf1cb72d
     # via terraform-aws-cloudtrail-to-slack

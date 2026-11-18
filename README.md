@@ -469,7 +469,7 @@ If you built the zip in Docker only to get Linux dependencies from a non-Linux m
 | Name | Source | Version |
 | ---- | ------ | ------- |
 | <a name="module_cloudtrail_to_slack_dynamodb_table"></a> [cloudtrail\_to\_slack\_dynamodb\_table](#module\_cloudtrail\_to\_slack\_dynamodb\_table) | terraform-aws-modules/dynamodb-table/aws | 3.3.0 |
-| <a name="module_lambda"></a> [lambda](#module\_lambda) | terraform-aws-modules/lambda/aws | 8.8.0 |
+| <a name="module_lambda"></a> [lambda](#module\_lambda) | terraform-aws-modules/lambda/aws | 8.13.0 |
 
 ## Resources
 
